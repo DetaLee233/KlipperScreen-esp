@@ -60,3 +60,16 @@
 #else
 #define BSP_HAS_LINUX_HOST 0
 #endif
+
+/* BSP_HAS_GCODE_THUMB：gcode 切片缩略图显示。
+ * Linux 上位机=1（本地读 gcodes 目录，BSP_HAS_LINUX_HOST）；
+ * ESP32 中带 PSRAM 且启用 LVGL lodepng 的板型=1（经 Moonraker HTTP 按
+ * metadata 返回的 relative_path 拉取 PNG，解码转灰度显示）；其余为 0。 */
+#if BSP_HAS_LINUX_HOST
+#define BSP_HAS_GCODE_THUMB 1
+#elif defined(ESP_PLATFORM) && defined(CONFIG_SPIRAM) && CONFIG_SPIRAM && \
+      defined(CONFIG_LV_USE_LODEPNG) && CONFIG_LV_USE_LODEPNG
+#define BSP_HAS_GCODE_THUMB 1
+#else
+#define BSP_HAS_GCODE_THUMB 0
+#endif

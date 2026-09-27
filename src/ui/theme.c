@@ -197,10 +197,20 @@ lv_obj_t *theme_row(lv_obj_t *parent, const char *key, const char *val, int y)
     lv_obj_set_size(row, ui_content_w(), ui_px(38));
     lv_obj_align(row, LV_ALIGN_TOP_MID, 0, y);
 
+    /* Widths are based on the card's inner box, not its outer width.  This is
+     * what keeps long translations and values in disjoint scrolling lanes. */
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    int val_w = inner_w * 40 / 100;
+    int key_w = inner_w - ui_px(2) - ui_px(4) - ui_px(6) - val_w;
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    lv_obj_set_width(k, key_w);
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, ui_px(2), 0);
 
     lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
+    lv_obj_set_width(v, val_w);
+    lv_label_set_long_mode(v, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_style_text_align(v, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_align(v, LV_ALIGN_RIGHT_MID, -ui_px(4), 0);
     return row;
 }
@@ -212,7 +222,12 @@ lv_obj_t *theme_row_link(lv_obj_t *scr, const char *key, const char *val, int y,
     lv_obj_align(row, LV_ALIGN_TOP_MID, 0, y);
     lv_obj_add_event_cb(row, cb, LV_EVENT_CLICKED, NULL);
 
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    int val_w = inner_w * 35 / 100;
+    int key_w = inner_w - ui_px(2) - ui_px(22) - ui_px(6) - val_w;
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    lv_obj_set_width(k, key_w);
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, ui_px(2), 0);
 
     lv_obj_t *arrow = theme_label(row, LV_SYMBOL_RIGHT, THEME_FONT_ICON, THEME_COL_ACCENT);
@@ -220,6 +235,9 @@ lv_obj_t *theme_row_link(lv_obj_t *scr, const char *key, const char *val, int y,
 
     /* 值标签在箭头左侧 */
     lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
+    lv_obj_set_width(v, val_w);
+    lv_label_set_long_mode(v, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_style_text_align(v, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_align_to(v, arrow, LV_ALIGN_OUT_LEFT_MID, -ui_px(4), 0);
     return row;
 }
@@ -240,6 +258,10 @@ lv_obj_t *theme_row_dropdown(lv_obj_t *scr, const char *key, const char *options
         text_x = ui_px(22);
     }
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    /* 长语言 key 限宽滚动，给右侧下拉留位 */
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    lv_obj_set_width(k, inner_w - text_x - ui_px(108));
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, text_x, 0);
 
     lv_obj_t *dd = lv_dropdown_create(row);
@@ -276,6 +298,10 @@ lv_obj_t *theme_row_switch(lv_obj_t *scr, const char *key, int y, int on, lv_eve
     lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    /* 长语言 key 限宽滚动，给右侧开关留位 */
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    lv_obj_set_width(k, inner_w - ui_px(54));
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, ui_px(2), 0);
 
     lv_obj_t *sw = lv_switch_create(row);

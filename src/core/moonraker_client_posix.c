@@ -1041,6 +1041,9 @@ static void *worker_main(void *arg)
         backoff = 1;
         set_state(MOONRAKER_CONNECTING);
         install_ws(conn.fd);
+        /* 本连接已消费掉此前所有重连请求；clear 后再来的 reload/stop 会
+         * 连带 bump reload_epoch，receive_loop 的 epoch 检查兜底不丢 */
+        reconnect_requested = 0;
         receive_loop(&conn, epoch);
         remove_ws(conn.fd);
         close_connection(&conn);

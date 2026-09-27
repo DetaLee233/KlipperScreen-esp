@@ -210,6 +210,9 @@ static lv_obj_t *make_row(lv_obj_t *parent, const char *name, uint32_t col,
        避免 "Extruder" 与大号温度值视觉粘连（其它分辨率不变） */
     int narrow = ui_scr_w() < ui_px(280);
     lv_obj_t *name_lbl = theme_label(row, name, narrow ? THEME_FONT_S : THEME_FONT_M, THEME_COL_TEXT);
+    int name_w = ui_content_w() - 2 * THEME_PAD - ui_px(44) - ui_px(116);
+    lv_obj_set_width(name_lbl, name_w);
+    lv_label_set_long_mode(name_lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(name_lbl, LV_ALIGN_LEFT_MID, ui_px(44), 0);
 
     lv_obj_t *cur = theme_label(row, "--", THEME_FONT_L, col);

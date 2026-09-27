@@ -23,3 +23,6 @@ CONFIG_PARTITION_TABLE_FILENAME="partitions_esp32s3-retro-go.csv"
 
 # 无旋转编码器、无触摸：导航全部走板载 GPIO 按键（bsp_gpio_buttons 后端，
 # 键表在 src/bsp/esp32/bsp_esp32s3_retro_go.c，不占用 Kconfig 输入配置）。
+
+# gcode 切片缩略图 PNG 解码（BSP_HAS_GCODE_THUMB，仅 PSRAM 板启用）
+CONFIG_LV_USE_LODEPNG=y

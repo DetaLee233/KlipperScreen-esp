@@ -82,8 +82,13 @@ static lv_obj_t *create(void)
         lv_obj_remove_flag(rows[i], LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_event_cb(rows[i], on_select, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
         names[i] = theme_label(rows[i], labels[i], THEME_FONT_M, THEME_COL_TEXT);
+        lv_obj_set_width(names[i], ui_content_w() - 2 * THEME_PAD - ui_px(72));
+        lv_label_set_long_mode(names[i], LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_align(names[i], LV_ALIGN_LEFT_MID, ui_px(2), 0);
         states[i] = theme_label(rows[i], "", THEME_FONT_S, THEME_COL_TEXT_DIM);
+        lv_obj_set_width(states[i], ui_px(64));
+        lv_label_set_long_mode(states[i], LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_obj_set_style_text_align(states[i], LV_TEXT_ALIGN_RIGHT, 0);
         lv_obj_align(states[i], LV_ALIGN_RIGHT_MID, -ui_px(4), 0);
         y += ui_px(39);
     }

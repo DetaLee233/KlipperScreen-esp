@@ -235,7 +235,7 @@ static void add_ap_row(int idx)
 
     lv_obj_t *ssid = theme_label(row, ap->ssid, THEME_FONT_M, THEME_COL_TEXT);
     lv_obj_align(ssid, LV_ALIGN_LEFT_MID, ui_px(20), 0);   /* 左侧留出勾位 */
-    lv_obj_set_width(ssid, ui_px(190));
+    lv_obj_set_width(ssid, ui_content_w() - 2 * THEME_PAD - ui_px(98));
     lv_label_set_long_mode(ssid, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     /* 右侧：加密/开放 + 信号强度四档图标 */

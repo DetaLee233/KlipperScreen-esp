@@ -492,17 +492,11 @@ jobs:
             每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面端；`desktop-linux-x86_64.tar.gz` 与 `desktop-linux-arm64.tar.gz` 是 Linux 上位机预编译包（静态链接 SDL2，解压后运行 `install.sh`，可选 systemd 独占显示服务或桌面 App，支持 Wayland-weston / X11）。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
 
             **本版更新 / What's new**
-            - 新增：ESP32 正式支持拓竹 Cloud Monitor，只读同步打印状态、任务名、温度、进度、剩余时间与层数；登录、验证码、设备选择和重启恢复沿用现有设置页 / ESP32 Bambu Cloud Monitor with sign-in, device selection, and read-only MQTT status sync
-            - 稳定性：无 PSRAM 板采用 4 KiB TLS MFL 与 368B 零分配流式解析器，HTTPS/MQTT 由单一 actor 串行持有，避免大包与双 TLS 会话耗尽堆 / 4 KiB TLS MFL, bounded streaming parsing, and serialized HTTPS/MQTT ownership on low-memory boards
-            - 修复：拓竹模式开机主任务栈溢出，以及主页时钟无时间来源；时钟现在复用拓竹 HTTPS 的标准 `Date` 头，不额外建立 NTP/TLS 连接 / Fix Bambu-mode boot stack overflow and synchronize the home clock from the existing cloud HTTP response
-            - 新增：设置 → 显示设置中的编码器步进 **1 / 2 / 4**（仅带编码器的 ESP32 构建），20 秒试用，确认才保存，取消/返回/超时自动恢复 / Encoder counts per detent with a safe 20-second trial and rollback
-            - 新增：独立屏幕色序页面，**默认 / RGB / BGR** 三行单选及本地化红绿蓝色块；支持的 SPI LCD 即时生效并记忆，旋转/镜像保留选择 / Persistent color order for supported SPI LCDs, with localized test swatches
-            - 完善：小屏与五语言交互、新增繁体字形；正式桌面程序不包含硬件设置预览项 / Small-screen and five-language UI, additional Traditional Chinese glyphs; desktop preview switches remain off in release builds
-            - 使用说明 / Guide: https://umeiko.github.io/KlipperScreen-esp/display-settings/ （中文：https://umeiko.github.io/KlipperScreen-esp/zh/display-settings/）
-            - issue #8 修复候选：ESP32 文件列表改为独立 HTTP 流式接收，只保留一页；界面固定复用 8 行，提供上一页/下一页/刷新，离页取消并忽略迟到响应。低内存、超时、异常应答均走已有状态提示。/ Candidate fix: bounded streaming file pages and reusable UI rows, cancellation and failure handling.
-            - wip.2 新日志已确认真实复现（低堆内存后 StoreProhibited），此前“分批 + 100 行上限”不是完整修复。本构建仍需受影响硬件验收，不宣称 issue 已闭环。/ Hardware confirmation is still required; the earlier row cap was not a complete fix.
-            - 复测与限制 / Retest guide: https://umeiko.github.io/KlipperScreen-esp/issue-8-file-list/
-            - 加固：状态推送链自检与自愈（针对"进度/温度冻结但控制正常"类故障）/ Status-feed watchdog & self-heal — 去重闸卡死 5s 自清；READY 后 30s 无状态合入先自动重订阅、再 30s 仍无则强拆重连；订阅发送失败 2s 自动重试；串口 `status` 新增 `status_age`/`gate` 诊断字段
+            - 新增：Linux 上位机与带 PSRAM 的 ESP32 支持 G-code 缩略图；ESP32 通过 Moonraker metadata 异步下载并在 PSRAM 中解码，文件详情与打印状态页均可显示 / G-code thumbnails for Linux hosts and PSRAM-equipped ESP32 boards, fetched asynchronously through Moonraker metadata
+            - 完善：方屏/横屏打印状态布局由缩略图替代进度环主视觉，百分比下沉；文件详情长文件名单行循环滚动 / Thumbnail-first square and landscape job-status layout, plus scrolling long filenames
+            - 修复：LVGL lodepng 返回对象误当像素导致 ESP32 缩略图雪花、黑块与越界读取 / Fix corrupted ESP32 thumbnails caused by treating LVGL's lodepng draw-buffer wrapper as raw pixels
+            - 修复：Linux 缩略图异步投递、图片缓存销毁与 SDL kiosk 关闭路径的竞态和崩溃 / Fix Linux crashes in thumbnail delivery, image-cache teardown, and SDL kiosk close handling
+            - 修复：Moonraker 切换打印机后的热循环断连；法语、意大利语等长键值在独立栏内滚动，不再互相遮挡 / Fix reconnect loops after switching printers and prevent long localized key/value labels from overlapping
           generate_release_notes: true
           # 标签含 wip（如 v0.2.0-wip.1）时标为预发布，不抢占 latest
           prerelease: ${{ contains(github.ref_name, 'wip') }}

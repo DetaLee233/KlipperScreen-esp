@@ -81,8 +81,13 @@ static lv_obj_t *create(void)
 
         names[i] = theme_label(rows[i], ui_lang_name((ui_lang_t)i),
                                THEME_FONT_M, THEME_COL_TEXT);
+        lv_obj_set_width(names[i], ui_content_w() - 2 * THEME_PAD - ui_px(82));
+        lv_label_set_long_mode(names[i], LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_align(names[i], LV_ALIGN_LEFT_MID, ui_px(2), 0);
         states[i] = theme_label(rows[i], "", THEME_FONT_S, THEME_COL_TEXT_DIM);
+        lv_obj_set_width(states[i], ui_px(74));
+        lv_label_set_long_mode(states[i], LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_obj_set_style_text_align(states[i], LV_TEXT_ALIGN_RIGHT, 0);
         lv_obj_align(states[i], LV_ALIGN_RIGHT_MID, -ui_px(4), 0);
         y += step;
     }

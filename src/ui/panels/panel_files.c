@@ -111,7 +111,7 @@ static lv_obj_t *create(void)
     int footer = ui_px(32);
     status_label = theme_label(scr, "", THEME_FONT_S, THEME_COL_TEXT_DIM);
     lv_obj_set_width(status_label, ui_content_w());
-    lv_label_set_long_mode(status_label, LV_LABEL_LONG_CLIP);
+    lv_label_set_long_mode(status_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(status_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(status_label, LV_ALIGN_TOP_MID, 0, top);
     list = lv_obj_create(scr);
@@ -127,9 +127,9 @@ static lv_obj_t *create(void)
         lv_obj_add_event_cb(rows[i], on_row, LV_EVENT_CLICKED, (void *)(intptr_t)i);
         names[i] = theme_label(rows[i], "", THEME_FONT_S, THEME_COL_TEXT);
         lv_obj_set_width(names[i], ui_content_w() - 2 * THEME_PAD - ui_px(65));
-        /* DOT mutates its text buffer; never let it modify the stored path.
-         * CLIP uses no marquee timers or writable copies; details show full names. */
-        lv_label_set_long_mode(names[i], LV_LABEL_LONG_CLIP);
+        /* DOT 会改写文本缓冲，绝不能让它动存储的路径；SCROLL_CIRCULAR 只滚动
+         * 不修改文本，超长文件名（Linux 长路径常见）可以完整看完。 */
+        lv_label_set_long_mode(names[i], LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_align(names[i], LV_ALIGN_LEFT_MID, 0, 0);
         sizes[i] = theme_label(rows[i], "", THEME_FONT_S, THEME_COL_TEXT_DIM);
         lv_obj_align(sizes[i], LV_ALIGN_RIGHT_MID, 0, 0);

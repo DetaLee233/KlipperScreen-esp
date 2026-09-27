@@ -247,8 +247,12 @@ static lv_obj_t *make_info_card(lv_obj_t *parent, int x, int y, int width, int h
     lv_obj_t *cap = theme_label(card, caption, THEME_FONT_S, THEME_COL_TEXT_DIM);
     *value = theme_label(card, "--", THEME_FONT_S, color);
     if (row_mode) {   /* 方屏窄列：标题居左、数值居右单行排布，超长滚动 */
+        int inner_w = width - 2 * THEME_PAD;
+        int value_w = inner_w * 3 / 5;
+        lv_obj_set_width(cap, inner_w - value_w - ui_px(5));
+        lv_label_set_long_mode(cap, LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_align(cap, LV_ALIGN_LEFT_MID, 0, 0);
-        lv_obj_set_width(*value, width * 3 / 5);
+        lv_obj_set_width(*value, value_w);
         lv_label_set_long_mode(*value, LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_set_style_text_align(*value, LV_TEXT_ALIGN_RIGHT, 0);
         lv_obj_align(*value, LV_ALIGN_RIGHT_MID, 0, 0);
@@ -276,6 +280,12 @@ static lv_obj_t *create(void)
     int progress_w = ui_px(102);
     int right_x = x0 + progress_w + gap;
     int right_w = ui_scr_w() - right_x - ui_px(8);
+#if BSP_HAS_GCODE_THUMB
+    /* 横屏高度放不下「圆环 + 缩略图」纵向堆叠：有缩略图能力的平台
+     * 改为缩略图占主视觉区，百分比下沉到原模式副标题的位置。 */
+    /* 方屏的主体同样是左右两栏，也应采用横向缩略图布局。 */
+    bool thumb_landscape = ui_scr_w() >= ui_scr_h();
+#endif
 
     lv_obj_t *progress_card = theme_card(scr);
     lv_obj_set_size(progress_card, progress_w, body_h);
@@ -294,13 +304,25 @@ static lv_obj_t *create(void)
     lv_obj_set_style_arc_width(arc, ui_px(7), LV_PART_MAIN);
     lv_obj_set_style_arc_width(arc, ui_px(7), LV_PART_INDICATOR);
     lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
-    lbl_pct = theme_label(arc, "0.0%", THEME_FONT_M, THEME_COL_TEXT);
-    lv_obj_center(lbl_pct);
+#if BSP_HAS_GCODE_THUMB
+    if (thumb_landscape) {
+        lv_obj_add_flag(arc, LV_OBJ_FLAG_HIDDEN);
+        lbl_pct = theme_label(progress_card, "0.0%", THEME_FONT_S, THEME_COL_TEXT);
+        lv_obj_align(lbl_pct, LV_ALIGN_BOTTOM_MID, 0, -ui_px(3));
+    } else
+#endif
+    {
+        lbl_pct = theme_label(arc, "0.0%", THEME_FONT_M, THEME_COL_TEXT);
+        lv_obj_center(lbl_pct);
+    }
 
     lbl_state = theme_label(progress_card, "空闲", THEME_FONT_M, THEME_COL_TEXT);
     lv_obj_align(lbl_state, LV_ALIGN_BOTTOM_MID, 0, -ui_px(22));
     lbl_mode = theme_label(progress_card, "Klipper", THEME_FONT_S, THEME_COL_TEXT_DIM);
     lv_obj_align(lbl_mode, LV_ALIGN_BOTTOM_MID, 0, -ui_px(3));
+#if BSP_HAS_GCODE_THUMB
+    if (thumb_landscape) lv_obj_add_flag(lbl_mode, LV_OBJ_FLAG_HIDDEN);
+#endif
 
     lv_obj_t *file_card = theme_card(scr);
     lv_obj_set_size(file_card, right_w, ui_px(46));
@@ -370,9 +392,17 @@ static lv_obj_t *create(void)
 
     update_ui();
 
-#if BSP_HAS_LINUX_HOST
-    /* Linux 上位机：进度环与状态文字之间的空区放当前文件的切片缩略图 */
-    {
+#if BSP_HAS_GCODE_THUMB
+    /* 竖屏：圆环在上、缩略图在下。横屏：缩略图替代圆环占主视觉区，
+     * 百分比已移到底部。Linux 本地解码；ESP32 PSRAM 板异步拉取灰度图。 */
+    if (thumb_landscape) {
+        int region_h = body_h - ui_px(48);   /* 底部留给状态 + 百分比 */
+        if (region_h > ui_px(24) && last_file[0]) {
+            lv_obj_t *thumb = gcode_thumb_create(progress_card, last_file,
+                                                  progress_w - ui_px(16), region_h);
+            if (thumb) lv_obj_align(thumb, LV_ALIGN_TOP_MID, 0, ui_px(5));
+        }
+    } else {
         int region_y = ui_px(5) + arc_size + ui_px(4);
         int region_h = body_h - ui_px(40) - region_y;   /* 底部留给状态/模式两行 */
         if (region_h > ui_px(24) && last_file[0]) {

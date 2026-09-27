@@ -19,6 +19,8 @@
 
 static int scr_w = 320, scr_h = 240;
 static SDL_mutex *lvgl_mutex;
+static bool kiosk_mode;
+static bool kiosk_close_reported;
 
 #if defined(KLIPPER_DESKTOP_SIMULATOR) && defined(KR_DISPLAY_SETTINGS_PREVIEW)
 static bool preview_bgr;
@@ -106,6 +108,25 @@ static void backlight_apply(int pct)
 static int SDLCALL screen_input_filter(void *userdata, SDL_Event *event)
 {
     (void)userdata;
+
+#if BSP_HAS_LINUX_HOST
+    /* A compositor close request is not meaningful for the supervised kiosk.
+     * LVGL 9.3's SDL handler processes SDL_QUIT as SDL_Quit() -> lv_deinit();
+     * its display destructor then calls SDL_Destroy* after SDL is already down,
+     * which crashes inside libSDL.  Keep the kiosk window alive; systemd stop
+     * still terminates us with SIGTERM (SDL signal handlers are disabled below). */
+    bool close_request = event->type == SDL_QUIT ||
+                         (event->type == SDL_WINDOWEVENT &&
+                          event->window.event == SDL_WINDOWEVENT_CLOSE);
+    if (kiosk_mode && close_request) {
+        if (!kiosk_close_reported) {
+            fprintf(stderr, "SDL: ignored compositor close request in kiosk mode\n");
+            kiosk_close_reported = true;
+        }
+        return 0;
+    }
+#endif
+
     bool activity = event->type == SDL_MOUSEWHEEL ||
                     event->type == SDL_KEYDOWN ||
                     event->type == SDL_TEXTINPUT ||
@@ -155,9 +176,13 @@ void bsp_init(void)
        以屏幕原生分辨率建窗并隐藏光标——weston kiosk-shell 会自动全屏化
        xdg-toplevel；裸 X11（xinit 无 WM）下原生分辨率窗口即铺满全屏。
        SDL_Init 幂等，提前调只为读显示模式。 */
-    const bool fullscreen = !res && getenv("KLIPPER_FULLSCREEN") &&
-                            getenv("KLIPPER_FULLSCREEN")[0] == '1';
-    if (fullscreen) {
+    kiosk_mode = !res && getenv("KLIPPER_FULLSCREEN") &&
+                 getenv("KLIPPER_FULLSCREEN")[0] == '1';
+    if (kiosk_mode) {
+        /* Do not let SDL translate SIGTERM/SIGINT into SDL_QUIT: the kiosk
+         * filter intentionally consumes compositor close events, while real
+         * service-stop signals must retain their normal process semantics. */
+        SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
         SDL_Init(SDL_INIT_VIDEO);
         SDL_DisplayMode mode;
         if (SDL_GetCurrentDisplayMode(0, &mode) == 0 &&
@@ -181,7 +206,7 @@ void bsp_init(void)
     }
 #endif
     /* 小屏放大看：160x128 → 3x，320x240 → 2x，800x480 → 1x；全屏服务不缩放 */
-    if (!fullscreen)
+    if (!kiosk_mode)
         lv_sdl_window_set_zoom(disp, scr_w <= 200 ? 3 : (scr_w <= 320 ? 2 : 1));
 #ifdef KLIPPER_DESKTOP_SIMULATOR
 #if defined(KR_DISPLAY_SETTINGS_PREVIEW)

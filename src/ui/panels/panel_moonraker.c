@@ -415,10 +415,15 @@ static lv_obj_t *make_row(lv_obj_t *parent, const char *key, lv_obj_t **val_lbl,
         text_x = ui_px(22);
     }
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    int val_w = inner_w * 42 / 100;
+    int key_w = inner_w - text_x - ui_px(4) - ui_px(6) - val_w;
+    lv_obj_set_width(k, key_w);
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, text_x, 0);
 
     *val_lbl = theme_label(row, "", THEME_FONT_S, THEME_COL_TEXT_DIM);
-    lv_obj_set_width(*val_lbl, ui_px(200));
+    lv_obj_set_width(*val_lbl, val_w);
     lv_label_set_long_mode(*val_lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(*val_lbl, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_align(*val_lbl, LV_ALIGN_RIGHT_MID, -ui_px(4), 0);
@@ -633,8 +638,14 @@ static lv_obj_t *create(void)
     lv_obj_set_size(row_status, ui_content_w(), ui_px(38));
     lv_obj_align(row_status, LV_ALIGN_TOP_MID, 0, y + ui_px(264));
     lv_obj_t *k = theme_label(row_status, "状态", THEME_FONT_M, THEME_COL_TEXT);
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    lv_obj_set_width(k, inner_w * 40 / 100);
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, ui_px(2), 0);
     lbl_status = theme_label(row_status, "", THEME_FONT_S, THEME_COL_TEXT_DIM);
+    lv_obj_set_width(lbl_status, inner_w * 55 / 100);
+    lv_label_set_long_mode(lbl_status, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_style_text_align(lbl_status, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_align(lbl_status, LV_ALIGN_RIGHT_MID, -ui_px(4), 0);
 
     btn_save = theme_button(scr, LV_SYMBOL_SAVE, "保存并连接", 1);

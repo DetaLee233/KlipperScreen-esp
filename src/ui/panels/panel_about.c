@@ -29,8 +29,12 @@ static int row2(lv_obj_t *scr, const char *key, const char *val, int y)
     lv_obj_align(row, LV_ALIGN_TOP_MID, 0, y);
 
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    lv_obj_set_width(k, ui_content_w() - 2 * THEME_PAD - ui_px(4));
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_TOP_LEFT, ui_px(2), ui_px(4));
     lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
+    lv_obj_set_width(v, ui_content_w() - 2 * THEME_PAD - ui_px(4));
+    lv_label_set_long_mode(v, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(v, LV_ALIGN_TOP_LEFT, ui_px(2), ui_px(28));
     return ui_px(57);
 }

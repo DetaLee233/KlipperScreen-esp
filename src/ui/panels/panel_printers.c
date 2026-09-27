@@ -135,6 +135,7 @@ static lv_obj_t *create(void)
         }
 
         lbl_name[i] = theme_label(card, "", THEME_FONT_M, THEME_COL_TEXT);
+        lv_obj_set_width(lbl_name[i], slot_w - 2 * THEME_PAD - lbl_x);
         lv_label_set_long_mode(lbl_name[i], LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_align(lbl_name[i], LV_ALIGN_TOP_LEFT, lbl_x, 0);
         lbl_host[i] = theme_label(card, "", THEME_FONT_S, THEME_COL_TEXT_DIM);
