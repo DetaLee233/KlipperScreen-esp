@@ -40,6 +40,8 @@ LV_IMAGE_DECLARE(img_globe_16);    /* 16px 地球：设置-语言行 */
 LV_IMAGE_DECLARE(img_globe_32);    /* 32px 大屏变体 */
 LV_IMAGE_DECLARE(img_swap_16);     /* 16px 双向箭头：Moonraker-切换打印机行 */
 LV_IMAGE_DECLARE(img_swap_32);     /* 32px 大屏变体 */
+LV_IMAGE_DECLARE(img_motor_off);   /* 18px 关闭电机：移动面板标题栏 */
+LV_IMAGE_DECLARE(img_motor_off_36);/* 36px 大屏变体 */
 LV_IMAGE_DECLARE(img_klipper_logo_56);  /* Klipper 标志：机器模式 / 打印机槽位 */
 LV_IMAGE_DECLARE(img_klipper_logo_112); /* 大屏 2x 变体 */
 LV_IMAGE_DECLARE(img_bambu_logo_56);    /* Bambu 标志：机器模式 */
@@ -60,6 +62,7 @@ LV_IMAGE_DECLARE(img_link_off_64);
 LV_IMAGE_DECLARE(img_alert_circle_64);
 LV_IMAGE_DECLARE(img_globe_64);
 LV_IMAGE_DECLARE(img_swap_64);
+LV_IMAGE_DECLARE(img_motor_off_72);
 LV_IMAGE_DECLARE(img_wifi_4_48);
 LV_IMAGE_DECLARE(img_wifi_3_48);
 LV_IMAGE_DECLARE(img_wifi_2_48);
@@ -87,6 +90,7 @@ LV_IMAGE_DECLARE(img_link_sm);
 LV_IMAGE_DECLARE(img_alert_circle_sm);
 LV_IMAGE_DECLARE(img_globe_16_sm);
 LV_IMAGE_DECLARE(img_swap_16_sm);
+LV_IMAGE_DECLARE(img_motor_off_sm);
 LV_IMAGE_DECLARE(img_klipper_logo_56_sm);
 LV_IMAGE_DECLARE(img_bambu_logo_56_sm);
 

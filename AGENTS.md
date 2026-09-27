@@ -32,12 +32,13 @@ Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（M
 - CI  release 资产名**不带版本号**：固件 `ESP-IDFv5.5-<board>.zip`、桌面 `desktop-win-x86_64.zip` / `desktop-macos-arm64.zip`、Linux 上位机 `desktop-linux-x86_64.tar.gz` / `desktop-linux-arm64.tar.gz`（ubuntu-22.04 / ubuntu-22.04-arm runner 静态编译 SDL2+cJSON，glibc≥2.35；tarball 内含 bin/KlipperScreen-esp + scripts/linux 的 install/uninstall/systemd/启动脚本）（`ESP-IDFv5.5` 是构建框架版本，不表示目标芯片都是 ESP32）；文档站下载直链走 `releases/latest/download/...`；tag 含 `wip` 标为预发布。旧 `klipper-remote-*` 遗留资产由 release job 在新资产上传成功后自动按 id 清理。
 - **命名约定**：产品二进制与 systemd 服务统一叫 `KlipperScreen-esp`（`KlipperScreen-esp.exe` / `bin/KlipperScreen-esp` / `KlipperScreen-esp.service`），`klipper-remote` 一名已停用；Moonraker identify 的 client_name 同步为 `KlipperScreen-esp[-平台]`。开发模拟器仍叫 `klipper_remote_simulator`。
 - CI 会强推移动标签 `latest` 到最新正式版提交。
+- 固件 zip 内的 `flash.cfg` 第四行是 `TOUCH_CAL=0/1`（CI 按板型名单写入，电阻屏=1）。用户侧刷机脚本 `tools/release/flash.bat` / `flash.sh` 开头询问中文/English（非 tty 默认英文；bat 靠 `chcp 65001`+UTF-8 存盘显中文，goto 结构避开 cmd 括号块 `%VAR%` 解析期展开的坑）；`TOUCH_CAL=1` 时刷完询问是否进入触摸校准，答 y 经串口发 `caltouch`（bat 用 `mode`+`echo > \\.\COMx`，已实测可靠；sh 用 esptool 必带的 pyserial）。开发路径 `tools/build-esp32.sh ... flash` 刷完同样会问（用 IDF python_env 的 pyserial）。
 - `src/ui/CMakeLists.txt` 是 GLOB 收集源文件：新增面板/字体文件后若链接报 undefined，先 touch 它触发 CMake 重配（不能加 CONFIGURE_DEPENDS，IDF script 模式会报错）。
 
 ## UI 约定
 
 - 小屏（160x128，`ui_scale() < 1.0f`）专属待遇：标题栏用 ≤2 字短标题——面板注册时在 `panel_def_t` 里填 `.title_s`（NULL 则用 `.title`），新增词条要同步补 `src/ui/lang.c` 五语言 dict；子面板标题栏不显示温度（panel_mgr.c show() 里按 ui_scale 判断）；SVG 图标统一用 0.45x 预生成变体（tools/icongen 生成 `_sm` 图标，`ui_layout.c` 的 `icon_sm()` 按映射表替换，新图标要同步进 `icon_sm_map`；`panel_printers.c` 槽位 logo 有自己的 scale 需单独乘 0.45）。
-- **面板不常驻**：非主面板离开时屏幕+导航组即销毁（panel_mgr.c `destroy_left_panel()`，CYD 无 PSRAM 扛不住 17 个面板全缓存，曾是 OOM 卡死根因）。面板每次进入都重跑 `create()`，静态对象指针不得假设跨访问存活；标题长/与打印控制无关的面板在 `panel_def_t` 置 `.hide_temps = 1`。
+- **面板不常驻**：非主面板离开时屏幕+导航组即销毁（panel_mgr.c `destroy_left_panel()`，CYD 无 PSRAM 扛不住 17 个面板全缓存，曾是 OOM 卡死根因）。面板每次进入都重跑 `create()`，静态对象指针不得假设跨访问存活；标题长/与打印控制无关的面板在 `panel_def_t` 置 `.hide_temps = 1`。标题栏右上角可挂「关闭电机」按钮（M84+二次确认，`panel_def_t.show_motor_off = 1`，仅 `PRINTER_CAP_MOVE` 后端显示，当前只有移动面板用）。
 - **切语言**：ESP32 保存后渐暗重启重建 UI；桌面端免重启——`panel_mgr_reload()`（异步调用，先切临时空屏再销毁全部面板树重建）后回语言页。
 - **大字档（desktop only）**：`ui_scale() >= 3.0`（720p+，如红米4 5寸 293dpi）走 huge 档——字体 40/48（`font_cjk_40/48.c`，gen_fonts.py `DESKTOP_ONLY_SIZES`，文件体带 `#ifndef ESP_PLATFORM` 守卫，ESP32 GLOB 编进工程也是空文件）、图标经 `icon_lg_map` 映射到 2x 变体（`_64`/`_112`/`_48`，ESP32 不编译该表，不引用不链接）。
 - **方向键导航白名单**（分派在 `ui_buttons.c`，实现在 `ui_nav.c`，ESP32 实体键与桌面键盘共用）：未标记组保持原生——上下=LVGL 线性 NEXT/PREV、左右原样送达控件、回车确认、Esc 返回。面板在 `create()` 里对默认组标记：`ui_nav_group_set_list()`（纯列表页：左=返回、右=进入/确定）或 `ui_nav_group_set_spatial()`（网格布局：四方向按屏幕坐标几何就近聚焦；禁用/隐藏项始终跳过，两轮扫描——严格正交邻居找不到时放宽到该方向最近可选项，防灰色项困死焦点）。当前 spatial：主界面/温度/机器模式/切换打印机/挤出/打印状态/拓竹设置/数字键盘（keypad.c）；list：设置/语言/显示/WiFi/文件/文件详情/Moonraker/拓竹连接。屏幕键盘（lv_keyboard 焦点）与展开的下拉框自动四键原样送达，无需标记；组编辑态（`lv_group_get_editing`，如温度调值、IP 段）左右自动原样。桌面端文本输入会话中方向键+回车归导航（回车=按虚拟键盘高亮键=输入字符），**F1=提交表单**；确认框（confirm.c）上下左右都切换按钮。
@@ -48,7 +49,7 @@ Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（M
 
 ## 息屏/唤醒按钮（ESP32 端）
 
-- BSP 接口：`bsp_screen_off()` / `bsp_screen_wake()` / `bsp_screen_is_off()`（`src/bsp/bsp.h`），与自动超时息屏共享同一 `screen_off` 状态；desktop 端为空操作。
+- BSP 接口：`bsp_screen_off()` / `bsp_screen_wake()` / `bsp_screen_is_off()`（`src/bsp/bsp.h`），与自动超时息屏共享同一 `screen_off` 状态；desktop 端经 `bsp_screen_power` 状态机联动背光回调（Linux 写 sysfs，Windows/macOS 仅打日志）。
 - 通用驱动 `src/bsp/esp32/bsp_sleep_button.c`：多 GPIO 轮询消抖（10ms 轮询 / 30ms 消抖，最多 8 个），任意按钮按下即在息屏/唤醒间切换。各板在 `bsp_init` 里用 `bsp_sleep_button_init()` 注册自己的按钮表。
 - 现有按钮：CYD / CYD-PLUS / E32R35T / JC8048 / esp32-st7735s-128_160-ec11 / esp32-st7789-320_240-ec11 = 板载 BOOT 键（GPIO0，低电平有效）；esp32s3-st7789-320_240-ec11（S3）/ esp32s3-st7796-480_320-xpt2046-ec11（S3）/ esp32s3-ILI9488-480_320-xpt2046-ec11（S3）/ esp32s3-ILI9341-320_240-xpt2046-ec11（S3）= BOOT（GPIO0）+ 外挂息屏按钮（GPIO39──按键──GND，内部上拉、低电平有效）；esp32c3-st7789-320_240-ec11（C3）= 板载 BOOT 键（GPIO9，低电平有效）。
 
@@ -56,6 +57,14 @@ Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（M
 
 - 通用后端 `src/bsp/esp32/bsp_gpio_buttons.[ch]`：6 键语义（上/下/左/右/确定/返回）喂 `ui_buttons_send()`；逐 GPIO 独立配置内部上拉/下拉/浮空与高/低电平有效；同一语义键可挂多 GPIO（确定键 1..3 个，任一按下即按下、全部抬起才算抬起，按下计数）。10ms 轮询 + 30ms 消抖，必须在持 LVGL 锁的 lvgl_task 里 `bsp_gpio_buttons_poll()`；事件经 handler 函数指针由 entry（app_main.c）接到语义层（避免 bsp→ui 组件反向依赖；两边枚举同序，静态断言钉死）。息屏时第一次按键只唤醒（bsp_screen_activity 吞键）。
 - 板型能力宏 `BSP_HAS_BUTTONS`（`bsp_caps.h`）目前仅 esp32s3-retro-go = 1；键表在各板 `bsp_init` 里 `bsp_gpio_buttons_bind()` 注册，后端不含任何板型引脚。retro-go 键表：UP=7 / DOWN=20 / LEFT=19 / RIGHT=6，OK=A(15)/START(17)/SELECT(16) 并联，BACK=B(5)；MENU(18)/OPTION(8)/BOOT(0) 保留未映射，GPIO0 不注册息屏按钮。
+
+## Linux 上位机（桌面 Linux 端口）
+
+- 能力宏（`bsp_caps.h`）：`BSP_HAS_DISPLAY_ROTATION`（桌面全平台=1，LVGL SDL 驱动软件旋转）与 `BSP_HAS_LINUX_HOST`（仅 `__linux__` 桌面=1，sysfs 背光 + evdev 电源键 + gcode 缩略图）；ESP32 全为 0。
+- **屏幕方向 0/90/180/270**：`lv_display_set_rotation()`（SDL 驱动 flush 时 `lv_draw_sw_rotate`，触摸坐标 LVGL 内核自动反变换），设置存 `klipperscreen.conf display_rotation`，改动后 `bsp_restart()` 重建布局。竖屏逻辑分辨率自动生效：`ui_layout.c` 的 `scale_f` 按 `min(w,h)/240` 取档（横屏 min 即高，行为不变）。**大坑**：desktop lv_conf 必须 `LV_SDL_RENDER_MODE = LV_DISPLAY_RENDER_MODE_PARTIAL`——SDL 驱动只在 PARTIAL 路径的 flush 里做 `lv_draw_sw_rotate`，默认 DIRECT 模式旋转 90/270 不转像素、fb 行宽与 texture 错位 → 花屏（LVGL snapshot 截图走逻辑层验不出这个 bug，只能真机或窗口实拍验）。
+- **硬件联动**（`src/bsp/desktop/bsp_linux_host.c`）：背光写 `/sys/class/backlight/<首个>/brightness`（install.sh 装 udev 规则放权给 video 组）；电源键枚举 `/dev/input/event*` 找 KEY_POWER 设备（红米2/4 = pm8941_pwrkey），主循环 `bsp_linux_powerkey_poll()` 轮询，按下 = 息屏/唤醒（install.sh 写 logind drop-in `HandlePowerKey=ignore`，否则 logind 先关机）；X11 后端再联动 `xset dpms force off/on`（2s timeout 防显示栈挂死 LVGL 线程，失败降级纯背光并记 `dpms_state`；息屏时背光+DPMS 全不可用会 toast「无背光控制，无法息屏」）。
+- **触摸输入只走鼠标路径**（`bsp_sdl2.c`）：lv_sdl_mouse 处理 `SDL_FINGER*` 时把窗口归一化坐标乘逻辑分辨率（旋转 90/270 后宽高交换）→ release 坐标错位（下拉选错项、滑条拖不到头）。`bsp_init` 强制 `SDL_HINT_TOUCH_MOUSE_EVENTS=1`，`screen_input_filter` 丢弃全部 FINGER 事件，触摸统一经 SDL touch→mouse 合成（窗口像素坐标，任意旋转正确）。third_party/lvgl 是 CI 现拉的 vanilla 9.3.0（gitignored），不能靠改它修。
+- **gcode 缩略图**（`src/core/gcode_thumbnail.c` + `src/ui/widgets/gcode_thumb.c`）：解析 `; thumbnail begin WxH len` base64 PNG 块（扫头/尾各 512KB，取最大块），LVGL lodepng 解码（desktop lv_conf `LV_USE_LODEPNG=1`），文件详情卡中部与打印状态进度环下方展示；根目录 `$KLIPPER_GCODES_DIR` 或 `~/printer_data/gcodes`。
 
 ---
 

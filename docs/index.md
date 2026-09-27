@@ -44,6 +44,17 @@ Full pinouts and hardware details: [Supported boards](boards.md).
 
 For self-compiling see the repo README; to run the firmware on your own board see the [porting guide](porting.md). Start its input section by choosing the no-touch or touch route, then choose resistive or capacitive touch where applicable.
 
+## Touch calibration (resistive-touch boards)
+
+Resistive-touch boards (XPT2046: CYD 2432S028R / 2432S028R-PLUS, E32R35T, and the ESP32-S3 480×320 XPT2046 variants) support two-point calibration. A board without calibration data enters the calibration screen automatically on first boot; boards whose firmware ships default parameters can be re-calibrated anytime if taps feel off:
+
+- **While flashing**: the release package scripts (`flash.bat` / `flash.sh`) ask at the end whether to calibrate — answer `y` and the board is sent into the calibration screen over serial automatically. The developer path `tools/build-esp32.sh <board> flash COMx` asks the same question.
+- **Anytime**: connect a serial terminal at 115200 8N1 and send `caltouch`; the device reboots straight into the calibration screen.
+
+Tap the two crosses precisely; the result is saved to flash and loaded on every boot.
+
+![Touch calibration demo](screenshots/touch_calibration.gif)
+
 ## Documentation map
 
 - [Supported boards](boards.md) — hardware info and pinouts of existing boards

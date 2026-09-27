@@ -9,6 +9,7 @@
 #include "bsp.h"
 #include "bsp_caps.h"
 #include "bsp_screen_power.h"
+#include "desktop/bsp_linux_host.h"
 #include "ui_app.h"
 #include "printer.h"
 #include "boot_anim.h"
@@ -136,11 +137,26 @@ static int save_bmp(const char *path)
 
 int main(int argc, char **argv)
 {
+    /* 服务模式 stdout 重定向到 printer_data 日志文件：行缓冲保证诊断
+       信息（backlight/power key/连接状态）及时落盘，否则全缓冲要攒 4KB */
+    setvbuf(stdout, NULL, _IOLBF, 0);
     bsp_init();
     /* 播种平台默认打印机必须在任何 settings 读取之前：machine_mode 的旧版
        兼容写会顺手创建 moonraker.conf，抢在播种前面会让"文件不存在"判据失效 */
     settings_seed_defaults();
     bsp_input_init();       /* 鼠标滚轮 + 中键模拟旋转编码器 */
+#if BSP_HAS_DISPLAY_ROTATION
+    /* 软件旋转（0/90/180/270）：LVGL SDL 驱动 flush 时旋转，触摸坐标内核自动
+       反变换；须在 ui_app_create 之前设置，布局按交换后的逻辑分辨率计算。 */
+    {
+        static const lv_display_rotation_t rot_map[] = {
+            LV_DISPLAY_ROTATION_0, LV_DISPLAY_ROTATION_90,
+            LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_270,
+        };
+        int deg = settings_load_display_rotation();
+        lv_display_set_rotation(bsp_get_display(), rot_map[deg / 90]);
+    }
+#endif
     if (bsp_disp_can_color_order())
         bsp_disp_set_color_order(settings_load_display_color_order());
 #if BSP_HAS_ENCODER_SETTINGS
@@ -193,6 +209,9 @@ int main(int argc, char **argv)
         bsp_lvgl_lock();
         lv_timer_handler();
         bsp_screen_power_poll();
+#if BSP_HAS_LINUX_HOST
+        bsp_linux_powerkey_poll();   /* 电源键 = 息屏/唤醒 */
+#endif
         if (shot_path && (int)(lv_tick_elaps(start)) >= shot_at) {
             int result = save_bmp(shot_path);
             bsp_lvgl_unlock();

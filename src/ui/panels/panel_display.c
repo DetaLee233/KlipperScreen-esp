@@ -224,6 +224,23 @@ static void on_screen_off_select(lv_event_t *e)
 /* 主题：深色/浅色。切换后存 klipperscreen.conf，渐暗到黑再重启（同语言切换） */
 static const char *theme_codes[] = { "dark", "light" };
 
+#if BSP_HAS_DISPLAY_ROTATION
+/* 屏幕方向（桌面端软件旋转）：分辨率按交换后逻辑值重算，须重启重建布局 */
+static const int rot_values[] = { 0, 90, 180, 270 };
+
+static void on_rotation_select(lv_event_t *e)
+{
+    lv_obj_t *dd = lv_event_get_target(e);
+    uint16_t sel = lv_dropdown_get_selected(dd);
+    if (sel >= sizeof(rot_values) / sizeof(rot_values[0])) return;
+    if (rot_values[sel] == settings_load_display_rotation()) return;
+    settings_save_display_rotation(rot_values[sel]);
+    lv_refr_now(NULL);      /* 先把选中态画出来 */
+    bsp_fade_out(1000);
+    bsp_restart();
+}
+#endif
+
 static void on_theme_select(lv_event_t *e)
 {
     lv_obj_t *dd = lv_event_get_target(e);
@@ -260,6 +277,18 @@ static lv_obj_t *create(void)
         theme_row_switch(scr, "水平镜像", y, settings_load_display_mirror(), on_mirror_toggle);
         y += step;
     }
+
+#if BSP_HAS_DISPLAY_ROTATION
+    /* 屏幕方向：0/90/180/270，重启后生效（布局按竖屏逻辑分辨率重建） */
+    {
+        int cur = settings_load_display_rotation();
+        int sel = 0;
+        for (unsigned i = 0; i < 4; i++)
+            if (rot_values[i] == cur) sel = (int)i;
+        theme_row_dropdown(scr, "屏幕方向", "0°\n90°\n180°\n270°", y, sel, on_rotation_select, NULL);
+        y += step;
+    }
+#endif
 
     /* 背光：行内显示当前亮度，点击进滑杆调节 */
     char br[8];

@@ -7,6 +7,8 @@
 #include "../ui_anim.h"
 #include "../panel_mgr.h"
 #include "../ui_nav.h"
+#include "../widgets/gcode_thumb.h"
+#include "bsp_caps.h"
 #include "printer.h"
 #include <stdio.h>
 #include <string.h>
@@ -99,6 +101,14 @@ static lv_obj_t *create(void)
 
     lbl_info = theme_label(card, "", THEME_FONT_S, THEME_COL_TEXT_DIM);
     lv_obj_align(lbl_info, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+
+#if BSP_HAS_LINUX_HOST
+    /* Linux 上位机：本地 gcode 的切片缩略图，填信息卡中部空白 */
+    lv_obj_t *thumb = gcode_thumb_create(card, sel_name,
+                                         ui_content_w() - 2 * THEME_PAD,
+                                         card_h - ui_px(70));
+    if (thumb) lv_obj_align(thumb, LV_ALIGN_CENTER, 0, ui_px(4));
+#endif
 
     /* 打印（主操作，accent） */
     int bw = (ui_content_w() - gap) / 2;

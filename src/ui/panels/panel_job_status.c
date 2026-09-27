@@ -11,6 +11,8 @@
 #include "printer.h"
 #include "app_settings.h"
 #include "../widgets/confirm.h"
+#include "../widgets/gcode_thumb.h"
+#include "bsp_caps.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -367,6 +369,23 @@ static lv_obj_t *create(void)
     theme_label(readonly_card, "云端监视 · 只读", THEME_FONT_M, THEME_COL_TEXT);
 
     update_ui();
+
+#if BSP_HAS_LINUX_HOST
+    /* Linux 上位机：进度环与状态文字之间的空区放当前文件的切片缩略图 */
+    {
+        int region_y = ui_px(5) + arc_size + ui_px(4);
+        int region_h = body_h - ui_px(40) - region_y;   /* 底部留给状态/模式两行 */
+        if (region_h > ui_px(24) && last_file[0]) {
+            lv_obj_t *thumb = gcode_thumb_create(progress_card, last_file,
+                                                 progress_w - ui_px(16), region_h);
+            if (thumb) {
+                int center_off = region_y + region_h / 2 - body_h / 2;
+                lv_obj_align(thumb, LV_ALIGN_CENTER, 0, center_off);
+            }
+        }
+    }
+#endif
+
     /* 底部按钮横向排列：方向键几何走位（ui_nav 白名单） */
     ui_nav_group_set_spatial(lv_group_get_default(), true);
     return scr;

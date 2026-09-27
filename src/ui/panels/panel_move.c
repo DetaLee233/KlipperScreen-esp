@@ -110,4 +110,6 @@ panel_def_t panel_move_def = {
     .create = create,
     .on_show = update_pos,
     .on_tick = update_pos,
+    .hide_temps = 1,               /* 标题栏温度让位给右上角关闭电机按钮 */
+    .show_motor_off = 1,
 };

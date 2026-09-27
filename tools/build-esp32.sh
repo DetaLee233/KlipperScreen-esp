@@ -83,6 +83,59 @@ board_conf() {
 
 idf() { powershell -NoProfile -ExecutionPolicy Bypass -File "$IDF_PS1" "$@"; }
 
+# 电阻触摸屏板型（与 src/bsp/bsp_caps.h 的 BSP_HAS_TOUCH_CAL 登记保持一致）
+has_touch_cal() {
+    case "$1" in
+        cyd_2432s028r|cyd_2432s028r_plus|e32r35t|\
+        esp32s3-st7796-480_320-xpt2046-ec11|esp32s3-ILI9488-480_320-xpt2046-ec11|\
+        esp32s3-ILI9341-320_240-xpt2046-ec11) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# 烧录后引导触摸校准：经串口发送 CLI 命令 caltouch（写标记文件并重启进入两点校准 UI）
+offer_touch_cal() {
+    local port="$1"
+    echo
+    read -r -p "该板型为电阻触摸屏。需要现在进入触摸校准吗？[y/N] " ans
+    case "$ans" in y|Y|yes|YES) ;; *) return 0 ;; esac
+    local py
+    py=$(ls -d "$(cygpath "$USERPROFILE")"/.espressif/python_env/*/Scripts/python.exe 2>/dev/null | head -1)
+    if [ -z "$py" ]; then
+        echo "未找到 IDF python 环境，请稍后手动用串口发送 caltouch 命令进入校准。"
+        return 0
+    fi
+    echo "等待设备重启..."
+    sleep 3
+    "$py" - "$port" <<'EOF'
+import sys, time
+try:
+    import serial
+except ImportError:
+    print("pyserial 不可用，请手动用串口发送 caltouch 命令进入校准")
+    sys.exit(0)
+port = sys.argv[1]
+try:
+    s = serial.Serial(port, 115200, timeout=2)
+except Exception as e:
+    print(f"串口 {port} 打开失败: {e}")
+    print("请手动用串口工具连接 115200 波特率，发送 caltouch 进入校准")
+    sys.exit(0)
+time.sleep(0.3)
+s.write(b"caltouch\n")
+s.flush()
+time.sleep(1.0)
+try:
+    resp = s.read(4096).decode(errors="ignore").strip()
+    if resp:
+        print(resp)
+except Exception:
+    pass
+s.close()
+print("已发送 caltouch，设备将重启并进入触摸校准界面，请依次点按屏幕上的校准点。")
+EOF
+}
+
 build_one() {
     board_conf "$1"
     if [ ! -f "$SDKCFG" ]; then
@@ -119,6 +172,7 @@ board_conf "$BOARD"
 case "$ACT" in
     build)      build_one "$BOARD" ;;
     menuconfig) idf -B "$BDIR" -DSDKCONFIG="$SDKCFG" -DSDKCONFIG_DEFAULTS="$DEFS" menuconfig ;;
-    flash)      build_one "$BOARD"; idf -B "$BDIR" -DSDKCONFIG="$SDKCFG" -p "${3:?port}" flash ;;
+    flash)      build_one "$BOARD"; idf -B "$BDIR" -DSDKCONFIG="$SDKCFG" -p "${3:?port}" flash
+                has_touch_cal "$BOARD" && offer_touch_cal "$3" ;;
     *) echo "unknown action: $ACT" >&2; exit 1 ;;
 esac

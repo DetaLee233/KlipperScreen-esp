@@ -99,6 +99,9 @@ int  settings_load_display_rotate(void);
 bool settings_save_display_rotate(int en);
 int  settings_load_display_mirror(void);
 bool settings_save_display_mirror(int en);
+/* 桌面端软件旋转：0/90/180/270（ESP32 不用，走 display_rotate 硬件翻转） */
+int  settings_load_display_rotation(void);
+bool settings_save_display_rotation(int deg);
 /* display_color_order: 0=板型默认，1=RGB，2=BGR；非法值回到默认。 */
 int  settings_load_display_color_order(void);
 bool settings_save_display_color_order(int order);

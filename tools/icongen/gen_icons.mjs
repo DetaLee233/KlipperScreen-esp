@@ -67,6 +67,10 @@ const ICONS = [
   ['toolchanger',    16, 'swap_16'],      // Moonraker-切换打印机行：双向箭头
   ['toolchanger',     7, 'swap_16_sm'],
   ['toolchanger',    32, 'swap_32'],      // 大屏 2x 变体
+  ['motor_off',      18, 'motor_off',    'RGB565A8'],    // 移动面板标题栏：关闭电机
+  ['motor_off',       8, 'motor_off_sm', 'RGB565A8'],
+  ['motor_off',      36, 'motor_off_36', 'RGB565A8'], // 大屏 2x 变体
+  ['motor_off',      72, 'motor_off_72', 'RGB565A8'], // 桌面 720p+ huge 档变体
   ['klipper_logo',   56, 'klipper_logo_56',  'RGB565A8'], // 官方红灰双色
   ['klipper_logo',   25, 'klipper_logo_56_sm', 'RGB565A8'],
   ['klipper_logo',  112, 'klipper_logo_112', 'RGB565A8'], // 大屏 2x 变体

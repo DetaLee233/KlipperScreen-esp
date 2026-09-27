@@ -6,8 +6,11 @@
 #include "bsp.h"
 #include "bsp_caps.h"
 #include "bsp_screen_power.h"
+#include "bsp_linux_host.h"
 #include "ui_buttons.h"
 #include "ui_nav.h"
+#include "ui_anim.h"
+#include "theme.h"
 #include <SDL.h>
 
 #include <stdio.h>
@@ -87,6 +90,15 @@ static uint64_t screen_now_ms(void)
 
 static void backlight_apply(int pct)
 {
+#if BSP_HAS_LINUX_HOST
+    if (bsp_linux_backlight_apply(pct)) return;   /* 写到了 /sys/class/backlight */
+    if (pct == 0 && !bsp_linux_dpms_ok()) {
+        /* 息屏请求但 sysfs 背光与 X11 DPMS 都不可用/失败：屏幕不会有任何
+           反应，日志 + toast 告知用户，避免"按了没反应"的困惑 */
+        printf("backlight: screen-off has no effect (no sysfs backlight, DPMS failed/unavailable)\n");
+        ui_toast("无背光控制，无法息屏", THEME_COL_WARN);
+    }
+#endif
     /* Desktop has no physical backlight; keep the state observable in logs. */
     printf("backlight: %d%%\n", pct);
 }
@@ -105,6 +117,11 @@ static int SDLCALL screen_input_filter(void *userdata, SDL_Event *event)
     /* Dropping the first event mirrors the hardware adapters: waking the
        screen must not also click a control or move encoder focus. */
     if (activity && bsp_screen_activity()) return 0;
+    /* FINGER 事件在旋转 90/270 下坐标被 lv_sdl_mouse 错误缩放（见 bsp_init），
+       丢弃之；触摸经 SDL touch→mouse 合成以鼠标事件到达，坐标始终正确。
+       FINGERDOWN 已在上面计入息屏唤醒，丢弃不影响唤醒逻辑。 */
+    if (event->type == SDL_FINGERDOWN || event->type == SDL_FINGERUP ||
+        event->type == SDL_FINGERMOTION) return 0;
 #if BSP_HAS_ENCODER_SETTINGS
     if (event->type == SDL_MOUSEWHEEL) {
         /* 在 SDL 正常 encoder 驱动之前换算；中键/键盘/触摸不受影响。
@@ -126,6 +143,13 @@ void bsp_init(void)
             scr_w = w; scr_h = h;
         }
     }
+
+    /* 触摸坐标修复：lv_sdl_mouse 处理 SDL_FINGER* 时把窗口归一化坐标乘的是
+       lv_display_get_horizontal_resolution()——旋转 90/270 后返回交换过的逻辑
+       分辨率，触摸被按错误宽高比缩放（release 坐标错位 → 下拉框选错项、滑条
+       拖不到头）。强制 touch→mouse 合成（窗口像素坐标，任何旋转下都正确），
+       并在 screen_input_filter 里丢弃 FINGER 事件，触摸只走鼠标路径。 */
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
 
     /* 独占显示服务（Linux systemd 单元设置 KLIPPER_FULLSCREEN=1）：
        以屏幕原生分辨率建窗并隐藏光标——weston kiosk-shell 会自动全屏化

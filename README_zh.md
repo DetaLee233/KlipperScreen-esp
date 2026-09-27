@@ -40,9 +40,9 @@ ESP-IDF v5.5.5 · LVGL v9.3 · 多后端（ESP32, Windows, Linux, MacOS）
 
 支持板型：最常见的各种CYD黄色esp32开发板，以及esp32s3开发板。预编译固件详见 **[支持的板子](https://umeiko.github.io/KlipperScreen-esp/zh/boards/)**
 
-## Linux 上位机（免编译，对标 KlipperScreen 部署）
+## 部署到 Linux 上位机
 
-一行安装（自动下载匹配架构的最新 release，交互式选择安装形态）：
+执行这行命令安装：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/umeiko/KlipperScreen-esp/main/scripts/linux/install.sh | bash
@@ -51,10 +51,9 @@ curl -fsSL https://raw.githubusercontent.com/umeiko/KlipperScreen-esp/main/scrip
 也可以从 [Releases](../../releases) 下载 `desktop-linux-x86_64.tar.gz` 或 `desktop-linux-arm64.tar.gz`，解压后运行 `./install.sh`：
 
 - 安装时可选**独占显示服务**（systemd 开机自启全屏，Wayland-weston 或 X11 后端）或普通**桌面 App**。
-- 检测到 `KlipperScreen.service` 时会询问是否停用，避免抢屏。
-- 二进制静态链接 SDL2/cJSON（X11/Wayland 库运行时加载），仅需 glibc ≥ 2.35（Debian 12 / Ubuntu 22.04 及以上，aarch64 与 x86_64）。
-- Klipper 上位机上配置落在 `~/printer_data/config/KlipperScreen-esp/`（fluidd/mainsail 可直接编辑），日志在 `~/printer_data/logs/`（网页端可下载）；写配置会同步 `.bak` 检查点，手改损坏自动还原。首次开机自动把打印机槽 1 预填为本机 Moonraker（`127.0.0.1`）。
-- 非 Klipper 桌面环境配置存 `~/.config/KlipperScreen-esp/`；卸载运行 `uninstall.sh`。
+- 检测到 `KlipperScreen.service` 时会询问是否停用。
+- Klipper 上位机上配置落在 `~/printer_data/config/KlipperScreen-esp/`（fluidd/mainsail 可直接编辑），日志在 `~/printer_data/logs/`。
+- 如果安装在桌面环境，配置位于 `~/.config/KlipperScreen-esp/`；卸载请运行 `uninstall.sh`。
 
 
 ## 首次配置
@@ -64,6 +63,8 @@ curl -fsSL https://raw.githubusercontent.com/umeiko/KlipperScreen-esp/main/scrip
 3. 语言/背光/自动息屏等偏好设置皆为自动保存。
 
 拓竹模式从“设置 → 打印机连接设置 → 机器模式 → 拓竹”进入。
+
+电阻屏板型如果出现触摸点击不准，请参照文档进行两点校准：[触摸校准](https://umeiko.github.io/KlipperScreen-esp/zh/)。
 
 串口 CLI 可用命令（115200 8N1）：`help` / `wifi` / `mr` / `printer <1-6>` / `mrstart` / `gc` / `status` / `ps` / `ls` / `cd` / `cat` / `rm` …
 

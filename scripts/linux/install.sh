@@ -203,7 +203,32 @@ install_service() {
     fi
 }
 
-# ---------- 7. 桌面 App 入口 ----------
+# ---------- 7. 硬件联动（仅服务模式）：背光写权限 + 电源键交给应用 ----------
+install_hardware_integration() {
+    [ "$SERVICE" = y ] || return
+
+    # /sys/class/backlight/*/brightness 默认 root 0644，放开给 video 组
+    # （install_deps 已把安装用户加进 video）。应用按 0..100% 写背光息屏。
+    if [ -d /sys/class/backlight ] && ls /sys/class/backlight/*/brightness >/dev/null 2>&1; then
+        sudo tee /etc/udev/rules.d/99-KlipperScreen-esp-backlight.rules > /dev/null <<'EOF'
+ACTION=="add|change", SUBSYSTEM=="backlight", RUN+="/bin/chgrp video /sys%p/brightness", RUN+="/bin/chmod g+w /sys%p/brightness"
+EOF
+        sudo udevadm control --reload 2>/dev/null || true
+        sudo udevadm trigger --subsystem-match=backlight --action=add 2>/dev/null || true
+        echo_ok "Backlight udev rule installed"
+    fi
+
+    # 电源键默认被 logind 抢走直接关机；交给应用做息屏/唤醒切换。
+    sudo mkdir -p /etc/systemd/logind.conf.d
+    sudo tee /etc/systemd/logind.conf.d/90-KlipperScreen-esp.conf > /dev/null <<'EOF'
+[Login]
+HandlePowerKey=ignore
+EOF
+    sudo systemctl restart systemd-logind 2>/dev/null || true
+    echo_ok "Power key bound to screen off (logind HandlePowerKey=ignore)"
+}
+
+# ---------- 8. 桌面 App 入口 ----------
 install_desktop_file() {
     mkdir -p "$HOME/.local/share/applications"
     cat > "$HOME/.local/share/applications/KlipperScreen-esp.desktop" <<EOF
@@ -221,6 +246,7 @@ install_deps
 handle_klipperscreen
 install_files
 install_service
+install_hardware_integration
 install_desktop_file
 
 if [ "$SERVICE" = y ] && [ "${KR_START:-1}" != 0 ]; then

@@ -103,8 +103,15 @@ jobs:
               mkdir -p "$GITHUB_WORKSPACE/symbols"
               cp "$bdir/klipper_remote_display.elf" "$GITHUB_WORKSPACE/symbols/$board.elf" || return 1
             fi
-            # 板型参数随产物走：刷机脚本读 flash.cfg 决定 chip/flash 大小/bootloader 偏移
-            printf 'CHIP=%s\nFLASH_SIZE=%s\nBL_OFFSET=%s\n' "$chip" "$flash_size" "$bl_offset" > "$dest/flash.cfg"
+            # 板型参数随产物走：刷机脚本读 flash.cfg 决定 chip/flash 大小/bootloader 偏移；
+            # TOUCH_CAL=1 标记电阻触摸屏板型（XPT2046），刷机脚本据此提供校准引导
+            touch_cal=0
+            case "$board" in
+              cyd_2432s028r|cyd_2432s028r_plus|e32r35t|\
+              esp32s3-st7796-480_320-xpt2046-ec11|esp32s3-ILI9488-480_320-xpt2046-ec11|\
+              esp32s3-ILI9341-320_240-xpt2046-ec11) touch_cal=1 ;;
+            esac
+            printf 'CHIP=%s\nFLASH_SIZE=%s\nBL_OFFSET=%s\nTOUCH_CAL=%s\n' "$chip" "$flash_size" "$bl_offset" "$touch_cal" > "$dest/flash.cfg"
             rm -f "$log"   # 成功板的构建日志不留档
           }
 

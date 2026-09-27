@@ -97,6 +97,8 @@ void printer_home(int axis)
 
 void printer_extrude(float mm) { P.e_pos += mm; }
 
+void printer_motors_off(void) { /* M84：mock 无保持力矩概念，状态不变 */ }
+
 void printer_print_start(const char *filename)
 {
     P.filename = filename;

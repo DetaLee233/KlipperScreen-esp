@@ -41,3 +41,22 @@
 #else
 #define BSP_HAS_BUTTONS 0
 #endif
+
+/* BSP_HAS_DISPLAY_ROTATION：桌面端（Windows/Linux/macOS）由 LVGL SDL 驱动
+ * 软件旋转（lv_display_set_rotation，flush 时 lv_draw_sw_rotate + 触摸坐标
+ * 由 LVGL 内核自动反变换），显示设置提供 0/90/180/270 四档；
+ * ESP32 各板走硬件 rotate180（bsp_disp_set_rotate180），不提供本能力。 */
+#if !defined(ESP_PLATFORM)
+#define BSP_HAS_DISPLAY_ROTATION 1
+#else
+#define BSP_HAS_DISPLAY_ROTATION 0
+#endif
+
+/* BSP_HAS_LINUX_HOST：Linux 上位机（红米等手机/树莓派）：
+ * 背光写 /sys/class/backlight、电源键读 /dev/input（evdev KEY_POWER）。
+ * Windows/macOS 桌面与 ESP32 为 0。 */
+#if defined(__linux__) && !defined(ESP_PLATFORM)
+#define BSP_HAS_LINUX_HOST 1
+#else
+#define BSP_HAS_LINUX_HOST 0
+#endif

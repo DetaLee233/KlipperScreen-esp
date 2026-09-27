@@ -40,7 +40,7 @@ void ui_layout_init(void)
     if (!d) return;
     scr_w = lv_display_get_horizontal_resolution(d);
     scr_h = lv_display_get_vertical_resolution(d);
-    scale_f = (float)scr_h / 240.0f;
+    scale_f = (float)LV_MIN(scr_w, scr_h) / 240.0f;   /* 竖屏按短边取档（横屏 min 即高，行为不变） */
     /* 不钳下限：160x128（scale≈0.53）等小屏按同比例缩小几何，
        字体走 small() 档（ui_font_*），避免等比缩到不可读的 7px */
 }
@@ -229,6 +229,7 @@ static const struct { const lv_image_dsc_t *base, *sm; } icon_sm_map[] = {
     { &img_alert_circle,    &img_alert_circle_sm },
     { &img_globe_16,        &img_globe_16_sm },
     { &img_swap_16,         &img_swap_16_sm },
+    { &img_motor_off,       &img_motor_off_sm },
     { &img_klipper_logo_56, &img_klipper_logo_56_sm },
     { &img_bambu_logo_56,   &img_bambu_logo_56_sm },
 };
@@ -257,6 +258,7 @@ static const struct { const lv_image_dsc_t *big, *lg; } icon_lg_map[] = {
     { &img_alert_circle_32,  &img_alert_circle_64 },
     { &img_globe_32,         &img_globe_64 },
     { &img_swap_32,          &img_swap_64 },
+    { &img_motor_off_36,     &img_motor_off_72 },
     { &img_wifi_4,           &img_wifi_4_48 },
     { &img_wifi_3,           &img_wifi_3_48 },
     { &img_wifi_2,           &img_wifi_2_48 },

@@ -240,6 +240,12 @@ void printer_home(int axis)
     klipper_gcode_script(g);
 }
 
+void printer_motors_off(void)
+{
+    if (!klipper_active()) return;
+    klipper_gcode_script("M84");
+}
+
 void printer_extrude(float mm)
 {
     if (!klipper_active()) return;

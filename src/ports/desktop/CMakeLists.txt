@@ -36,10 +36,12 @@ set(DESKTOP_COMMON_SRCS
     ${SRC_ROOT}/bsp/bsp_display_color.c
     ${SRC_ROOT}/core/file_list_stream.c
     ${SRC_ROOT}/bsp/desktop/bsp_sdl2.c
+    ${SRC_ROOT}/bsp/desktop/bsp_linux_host.c
     ${SRC_ROOT}/bsp/desktop/bsp_wifi_windows.c
     ${SRC_ROOT}/bsp/desktop/bsp_wifi_linux.c
     ${SRC_ROOT}/bsp/desktop/bsp_conf_file.c
     ${SRC_ROOT}/core/app_settings.c
+    ${SRC_ROOT}/core/gcode_thumbnail.c
     ${UI_SRCS}
 )
 

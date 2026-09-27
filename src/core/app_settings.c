@@ -499,6 +499,12 @@ int  settings_load_display_rotate(void)      { return ksc_load_int("display_rota
 bool settings_save_display_rotate(int en)    { return ksc_save_int("display_rotate", en ? 1 : 0); }
 int  settings_load_display_mirror(void)      { return ksc_load_int("display_mirrorx", 0) != 0; }
 bool settings_save_display_mirror(int en)    { return ksc_save_int("display_mirrorx", en ? 1 : 0); }
+int  settings_load_display_rotation(void)
+{
+    int d = ksc_load_int("display_rotation", 0);
+    return (d == 90 || d == 180 || d == 270) ? d : 0;
+}
+bool settings_save_display_rotation(int deg) { return ksc_save_int("display_rotation", deg); }
 
 int settings_load_display_color_order(void)
 {

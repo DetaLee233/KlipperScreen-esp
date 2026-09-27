@@ -93,6 +93,11 @@ static void show(panel_def_t *p, int push, panel_def_t *leaving)
     titlebar_set(title, nav_top > 0);
     /* 小屏（scale<1）标题位窄，子面板的温度让位给标题，只在主面板（时钟位）显示 */
     titlebar_show_temps(!p->hide_temps && (ui_scale() >= 1.0f || nav_top == 0));
+    /* 关闭电机按钮：仅声明面板 + 后端支持移动（Klipper）时显示 */
+    int want_motoroff = p->show_motor_off && printer_has_capability(PRINTER_CAP_MOVE);
+    titlebar_show_motoroff(want_motoroff);
+    lv_group_remove_obj(titlebar_motoroff_button());
+    if (want_motoroff) lv_group_add_obj(p->nav_group, titlebar_motoroff_button());
     ui_nav_activate(p->nav_group);
     ui_nav_set_global_obj(titlebar_back_button(), nav_top > 0);
     if (p->on_show) p->on_show();

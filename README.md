@@ -38,9 +38,9 @@ Download the flash package `*.zip` for your board from [Releases](../../releases
 
 Supported boards: the common yellow CYD ESP32 dev boards and ESP32-S3 boards. Prebuilt firmware per board: **[Supported boards](https://umeiko.github.io/KlipperScreen-esp/boards/)**
 
-## Linux host (prebuilt, KlipperScreen-style deployment)
+## Deploying to a Linux host
 
-One-line install (downloads the latest release for your architecture, asks how you want it installed):
+Install with this one-liner:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/umeiko/KlipperScreen-esp/main/scripts/linux/install.sh | bash
@@ -49,10 +49,9 @@ curl -fsSL https://raw.githubusercontent.com/umeiko/KlipperScreen-esp/main/scrip
 Or download `desktop-linux-x86_64.tar.gz` / `desktop-linux-arm64.tar.gz` from [Releases](../../releases), extract, then run `./install.sh`:
 
 - Choose between a **dedicated display service** (systemd autostart, fullscreen via Wayland-weston or X11) or a regular **desktop app**.
-- If `KlipperScreen.service` is detected, the installer offers to disable it to avoid contention for the screen.
-- The binary statically links SDL2/cJSON (X11/Wayland libraries are loaded at runtime) and only needs glibc ≥ 2.35 (Debian 12 / Ubuntu 22.04+, aarch64 or x86_64).
-- On Klipper hosts, config lands in `~/printer_data/config/KlipperScreen-esp/` (editable from fluidd/mainsail) and logs in `~/printer_data/logs/` (downloadable); a `.bak` checkpoint restores known-good config if a hand edit breaks it. First boot pre-fills printer slot 1 with the local Moonraker (`127.0.0.1`).
-- Config lives in `~/.config/KlipperScreen-esp/` on non-Klipper desktops; uninstall with `uninstall.sh`.
+- If `KlipperScreen.service` is detected, the installer offers to disable it.
+- On Klipper hosts, config lands in `~/printer_data/config/KlipperScreen-esp/` (editable from fluidd/mainsail) and logs in `~/printer_data/logs/`.
+- On desktop environments, config lives in `~/.config/KlipperScreen-esp/`; uninstall with `uninstall.sh`.
 
 
 ## First-time setup
@@ -62,6 +61,8 @@ Or download `desktop-linux-x86_64.tar.gz` / `desktop-linux-arm64.tar.gz` from [R
 3. Language / backlight / auto screen-off preferences are all saved automatically.
 
 Bambu mode lives under Settings → Printer Connection → Machine Mode → Bambu.
+
+If taps land off-target on a resistive-touch board, run the two-point calibration described in the docs: [Touch calibration](https://umeiko.github.io/KlipperScreen-esp/#touch-calibration-resistive-touch-boards).
 
 Serial CLI commands (115200 8N1): `help` / `wifi` / `mr` / `printer <1-6>` / `mrstart` / `gc` / `status` / `ps` / `ls` / `cd` / `cat` / `rm` …
 

@@ -313,6 +313,15 @@ static const dict_entry_t dict[] = {
      "Écoulé %s\nRestant %s",                                      "Trascorso %s\nRimanente %s"},
     {"喷嘴 %d°C（挤出需 ≥ %d°C）", "Nozzle %d°C (min %d°C)", "噴嘴 %d°C（擠出需 ≥ %d°C）",
      "Buse %d°C (min %d°C)",                                       "Ugello %d°C (min %d°C)"},
+    {"关闭电机",        "Motors Off",          "關閉電機",          "Arrêter moteurs",           "Disattiva motori"},
+    {"屏幕方向",        "Orientation",         "螢幕方向",          "Orientation",               "Orientamento"},
+    {"已关闭电机（M84）", "Motors off (M84)",  "已關閉電機（M84）", "Moteurs arrêtés (M84)",     "Motori disattivati (M84)"},
+    {"无背光控制，无法息屏", "No backlight control", "無背光控制，無法息屏", "Pas de contrôle du rétroéclairage", "Controllo retroilluminazione assente"},
+    {"确认关闭电机？\n所有步进电机将失去保持力矩（M84）",
+     "Turn motors off?\nAll steppers will lose holding torque (M84)",
+     "確認關閉電機？\n所有步進馬達將失去保持力矩（M84）",
+     "Arrêter les moteurs ?\nPerte du couple de maintien (M84)",
+     "Disattivare i motori?\nPerdita della coppia di mantenimento (M84)"},
 };
 /* clang-format on */
 
