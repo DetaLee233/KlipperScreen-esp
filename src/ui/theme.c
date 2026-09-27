@@ -223,22 +223,28 @@ lv_obj_t *theme_row_link(lv_obj_t *scr, const char *key, const char *val, int y,
     lv_obj_add_event_cb(row, cb, LV_EVENT_CLICKED, NULL);
 
     int inner_w = ui_content_w() - 2 * THEME_PAD;
-    int val_w = inner_w * 35 / 100;
-    int key_w = inner_w - ui_px(2) - ui_px(22) - ui_px(6) - val_w;
+    int has_val = val && val[0];
+    int val_w = has_val ? inner_w * 35 / 100 : 0;
+    /* 没有右侧值的菜单项把整行空间留给标题；此前仍预留 35% 的值区，
+       会让“打印机连接设置”等本来放得下的标题无意义地循环滚动。 */
+    int key_w = inner_w - ui_px(2) - ui_px(22) -
+                (has_val ? ui_px(6) + val_w : 0);
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
     lv_obj_set_width(k, key_w);
-    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_long_mode(k, has_val ? LV_LABEL_LONG_SCROLL_CIRCULAR : LV_LABEL_LONG_CLIP);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, ui_px(2), 0);
 
     lv_obj_t *arrow = theme_label(row, LV_SYMBOL_RIGHT, THEME_FONT_ICON, THEME_COL_ACCENT);
     lv_obj_align(arrow, LV_ALIGN_RIGHT_MID, -ui_px(4), 0);
 
-    /* 值标签在箭头左侧 */
-    lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
-    lv_obj_set_width(v, val_w);
-    lv_label_set_long_mode(v, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_style_text_align(v, LV_TEXT_ALIGN_RIGHT, 0);
-    lv_obj_align_to(v, arrow, LV_ALIGN_OUT_LEFT_MID, -ui_px(4), 0);
+    if (has_val) {
+        /* 值标签在箭头左侧 */
+        lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
+        lv_obj_set_width(v, val_w);
+        lv_label_set_long_mode(v, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_obj_set_style_text_align(v, LV_TEXT_ALIGN_RIGHT, 0);
+        lv_obj_align_to(v, arrow, LV_ALIGN_OUT_LEFT_MID, -ui_px(4), 0);
+    }
     return row;
 }
 

@@ -38,6 +38,25 @@ static lv_obj_t *readonly_card;
 static int cur_shown_pct10;
 static bool job_active;
 static char last_file[64];
+static bool narrow_info_rows;
+
+typedef enum {
+    INFO_ICON_NONE,
+    INFO_ICON_ELAPSED,
+    INFO_ICON_REMAINING,
+    INFO_ICON_NOZZLE,
+    INFO_ICON_BED,
+} info_icon_t;
+
+static void set_temp_value(lv_obj_t *label, const char *text)
+{
+    const lv_font_t *font = THEME_FONT_S;
+    int width = lv_obj_get_width(label);
+    if (width > 0 && lv_text_get_width(text, (uint32_t)strlen(text), font, 0) > width)
+        font = ui_font_value_compact();
+    lv_obj_set_style_text_font(label, font, 0);
+    lv_label_set_text(label, text);
+}
 
 static void arc_anim_cb(void *obj, int32_t value)
 {
@@ -126,16 +145,27 @@ static void update_ui(void)
     else snprintf(buf, sizeof(buf), "--:--:--");
     lv_label_set_text(lbl_remaining, buf);
     char current[12], target_temp[12], temp_text[32];
-    /* 小屏紧凑格：去掉空格与度号，防止折行盖住标题行 */
-    const char *fmt = compact() ? "%s/%s" : "%s / %s" "\xC2\xB0";
-    theme_fmt_float(current, sizeof(current), printer_temp_ext(), 1);
-    theme_fmt_float(target_temp, sizeof(target_temp), printer_target_ext(), 0);
-    snprintf(temp_text, sizeof(temp_text), fmt, current, target_temp);
-    lv_label_set_text(lbl_ext, temp_text);
-    theme_fmt_float(current, sizeof(current), printer_temp_bed(), 1);
-    theme_fmt_float(target_temp, sizeof(target_temp), printer_target_bed(), 0);
-    snprintf(temp_text, sizeof(temp_text), fmt, current, target_temp);
-    lv_label_set_text(lbl_bed, temp_text);
+    /* 方屏/竖屏的窄右栏只保留当前温度：目标温度可在点入温度页后查看，
+       比压缩或裁掉当前值更可靠，也彻底消除多语言标题对数值宽度的影响。 */
+    if (narrow_info_rows) {
+        theme_fmt_float(current, sizeof(current), printer_temp_ext(), 1);
+        snprintf(temp_text, sizeof(temp_text), "%s" "\xC2\xB0", current);
+        set_temp_value(lbl_ext, temp_text);
+        theme_fmt_float(current, sizeof(current), printer_temp_bed(), 1);
+        snprintf(temp_text, sizeof(temp_text), "%s" "\xC2\xB0", current);
+        set_temp_value(lbl_bed, temp_text);
+    } else {
+        /* 小屏紧凑格：去掉空格与度号，防止折行盖住标题行 */
+        const char *fmt = compact() ? "%s/%s" : "%s / %s" "\xC2\xB0";
+        theme_fmt_float(current, sizeof(current), printer_temp_ext(), 1);
+        theme_fmt_float(target_temp, sizeof(target_temp), printer_target_ext(), 0);
+        snprintf(temp_text, sizeof(temp_text), fmt, current, target_temp);
+        set_temp_value(lbl_ext, temp_text);
+        theme_fmt_float(current, sizeof(current), printer_temp_bed(), 1);
+        theme_fmt_float(target_temp, sizeof(target_temp), printer_target_bed(), 0);
+        snprintf(temp_text, sizeof(temp_text), fmt, current, target_temp);
+        set_temp_value(lbl_bed, temp_text);
+    }
 
     int32_t target = printer_progress_permille();
     if (target != cur_shown_pct10) {
@@ -233,35 +263,70 @@ static void on_estop(lv_event_t *e)
     confirm_open("确认急停？\n打印机将立即停止所有运动和加热", "急停", do_estop, NULL);
 }
 
+static void on_temperature(lv_event_t *e)
+{
+    LV_UNUSED(e);
+    if (settings_load_machine_mode() == MACHINE_MODE_KLIPPER)
+        panel_mgr_open("temperature");
+}
+
 static int compact(void) { return ui_scale() < 1.0f; }   /* 小屏：行高放不下两行带边距文本 */
 
 static lv_obj_t *make_info_card(lv_obj_t *parent, int x, int y, int width, int height,
                                 const char *caption, lv_obj_t **value, uint32_t color,
-                                int row_mode)
+                                int row_mode, int temperature, info_icon_t row_icon)
 {
-    lv_obj_t *card = theme_card(parent);
+    int temp_action = temperature && settings_load_machine_mode() == MACHINE_MODE_KLIPPER;
+    lv_obj_t *card = temp_action ? theme_action_card(parent) : theme_card(parent);
+    if (temp_action) lv_obj_add_event_cb(card, on_temperature, LV_EVENT_CLICKED, NULL);
     lv_obj_set_size(card, width, height);
     lv_obj_set_pos(card, x, y);
     int tight = compact() || row_mode || height < ui_px(40);   /* 小屏卡高只有 23~31px，必须走紧凑排布 */
     if (tight) lv_obj_set_style_pad_ver(card, ui_px(1), 0);
-    lv_obj_t *cap = theme_label(card, caption, THEME_FONT_S, THEME_COL_TEXT_DIM);
     *value = theme_label(card, "--", THEME_FONT_S, color);
-    if (row_mode) {   /* 方屏窄列：标题居左、数值居右单行排布，超长滚动 */
+    if (row_mode) {   /* 窄右栏：中/繁中文保留短标题，其余语言改用图标 */
         int inner_w = width - 2 * THEME_PAD;
-        int value_w = inner_w * 3 / 5;
-        lv_obj_set_width(cap, inner_w - value_w - ui_px(5));
-        lv_label_set_long_mode(cap, LV_LABEL_LONG_SCROLL_CIRCULAR);
-        lv_obj_align(cap, LV_ALIGN_LEFT_MID, 0, 0);
+        int left_lane_w;
+        ui_lang_t lang = ui_lang_get();
+        if (lang == UI_LANG_ZH || lang == UI_LANG_ZH_TW) {
+            lv_obj_t *cap = theme_label(card, caption, THEME_FONT_S, THEME_COL_TEXT_DIM);
+            int text_w = lv_text_get_width(lv_label_get_text(cap),
+                                           (uint32_t)strlen(lv_label_get_text(cap)),
+                                           THEME_FONT_S, 0);
+            left_lane_w = LV_MIN(text_w + ui_px(5), inner_w / 2);
+            lv_obj_set_width(cap, left_lane_w);
+            lv_label_set_long_mode(cap, LV_LABEL_LONG_CLIP);
+            lv_obj_align(cap, LV_ALIGN_LEFT_MID, 0, 0);
+        } else {
+            left_lane_w = ui_px(22);
+            lv_obj_t *icon_obj;
+            if (row_icon == INFO_ICON_NOZZLE) {
+                icon_obj = theme_img(card, ui_icon(&img_nozzle_16, &img_nozzle_32), THEME_COL_EXTRUDER);
+            } else if (row_icon == INFO_ICON_BED) {
+                icon_obj = theme_img(card, ui_icon(&img_bed_16, &img_bed_32), THEME_COL_BED);
+            } else {
+                const char *symbol = row_icon == INFO_ICON_REMAINING ? LV_SYMBOL_NEXT : LV_SYMBOL_PLAY;
+                icon_obj = theme_label(card, symbol, THEME_FONT_ICON, THEME_COL_TEXT_DIM);
+            }
+            lv_obj_align(icon_obj, LV_ALIGN_LEFT_MID, 0, 0);
+        }
+        int value_w = inner_w - left_lane_w;
         lv_obj_set_width(*value, value_w);
-        lv_label_set_long_mode(*value, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_label_set_long_mode(*value, LV_LABEL_LONG_CLIP);
         lv_obj_set_style_text_align(*value, LV_TEXT_ALIGN_RIGHT, 0);
         lv_obj_align(*value, LV_ALIGN_RIGHT_MID, 0, 0);
         return card;
     }
+    lv_obj_t *cap = theme_label(card, caption, THEME_FONT_S, THEME_COL_TEXT_DIM);
     lv_obj_align(cap, LV_ALIGN_TOP_LEFT, 0, tight ? 0 : -ui_px(1));
     if (tight) {   /* 防折行盖住标题行：限宽，放不下就滚动显示 */
         lv_obj_set_width(*value, width - 2 * THEME_PAD);
-        lv_label_set_long_mode(*value, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_label_set_long_mode(*value, temperature ? LV_LABEL_LONG_CLIP
+                                                   : LV_LABEL_LONG_SCROLL_CIRCULAR);
+    } else if (temperature) {
+        /* 温度永远固定单行；空间不足由 update_ui 降一档字号，不做跑马灯。 */
+        lv_obj_set_width(*value, width - 2 * THEME_PAD);
+        lv_label_set_long_mode(*value, LV_LABEL_LONG_CLIP);
     }
     lv_obj_align(*value, LV_ALIGN_BOTTOM_LEFT, 0, tight ? 0 : ui_px(1));
     return card;
@@ -337,24 +402,29 @@ static lv_obj_t *create(void)
 
     int cell_w = (right_w - gap) / 2;
     int row2_y = y0 + ui_px(46) + gap;
-    if (cell_w < ui_px(70)) {
-        /* 方屏（480x480）：右列两格分栏后单格过窄放不下时间/温度文本，
-           改为整列单行卡竖排（标题左、数值右） */
+    narrow_info_rows = cell_w < ui_px(70);
+    if (narrow_info_rows) {
+        /* 方屏和竖屏：右列两格分栏后过窄，改为语言无关图标 + 数值的竖排。 */
         int rows_h = body_h - ui_px(46) - gap;
         int rh = (rows_h - 3 * gap) / 4;
-        make_info_card(scr, right_x, row2_y, right_w, rh, "已用", &lbl_elapsed, THEME_COL_TEXT, 1);
-        make_info_card(scr, right_x, row2_y + (rh + gap), right_w, rh, "剩余", &lbl_remaining, THEME_COL_TEXT, 1);
-        make_info_card(scr, right_x, row2_y + 2 * (rh + gap), right_w, rh, "喷嘴", &lbl_ext, THEME_COL_EXTRUDER, 1);
-        make_info_card(scr, right_x, row2_y + 3 * (rh + gap), right_w, rh, "热床", &lbl_bed, THEME_COL_BED, 1);
+        make_info_card(scr, right_x, row2_y, right_w, rh, "已用", &lbl_elapsed,
+                       THEME_COL_TEXT, 1, 0, INFO_ICON_ELAPSED);
+        make_info_card(scr, right_x, row2_y + (rh + gap), right_w, rh, "剩余", &lbl_remaining,
+                       THEME_COL_TEXT, 1, 0, INFO_ICON_REMAINING);
+        make_info_card(scr, right_x, row2_y + 2 * (rh + gap), right_w, rh, "喷嘴", &lbl_ext,
+                       THEME_COL_EXTRUDER, 1, 1, INFO_ICON_NOZZLE);
+        make_info_card(scr, right_x, row2_y + 3 * (rh + gap), right_w, rh, "热床", &lbl_bed,
+                       THEME_COL_BED, 1, 1, INFO_ICON_BED);
     } else {
-        make_info_card(scr, right_x, row2_y, cell_w, ui_px(44), "已用", &lbl_elapsed, THEME_COL_TEXT, 0);
+        make_info_card(scr, right_x, row2_y, cell_w, ui_px(44), "已用", &lbl_elapsed,
+                       THEME_COL_TEXT, 0, 0, INFO_ICON_NONE);
         make_info_card(scr, right_x + cell_w + gap, row2_y, cell_w, ui_px(44),
-                       "剩余", &lbl_remaining, THEME_COL_TEXT, 0);
+                       "剩余", &lbl_remaining, THEME_COL_TEXT, 0, 0, INFO_ICON_NONE);
         int row3_y = row2_y + ui_px(44) + gap;
         make_info_card(scr, right_x, row3_y, cell_w, body_h - (row3_y - y0),
-                       "喷嘴", &lbl_ext, THEME_COL_EXTRUDER, 0);
+                       "喷嘴", &lbl_ext, THEME_COL_EXTRUDER, 0, 1, INFO_ICON_NONE);
         make_info_card(scr, right_x + cell_w + gap, row3_y, cell_w, body_h - (row3_y - y0),
-                       "热床", &lbl_bed, THEME_COL_BED, 0);
+                       "热床", &lbl_bed, THEME_COL_BED, 0, 1, INFO_ICON_NONE);
     }
 
     btn_pause = theme_button(scr, NULL, NULL, 1);

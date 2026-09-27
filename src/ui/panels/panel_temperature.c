@@ -206,16 +206,16 @@ static lv_obj_t *make_row(lv_obj_t *parent, const char *name, uint32_t col,
     lv_obj_t *ic = theme_img(row, icon, col);
     lv_obj_align(ic, LV_ALIGN_LEFT_MID, ui_px(4), 0);
 
-    /* 方屏（480x480）行内容区比 2x 基准窄：名字降一号字、当前值右移一点，
-       避免 "Extruder" 与大号温度值视觉粘连（其它分辨率不变） */
+    /* 方屏/竖屏的横向空间紧：名称和当前温度各降一档，并把原先过度
+       预留给温度的宽度还给名称。这里的名称是有限词条，不应跑马灯。 */
     int narrow = ui_scr_w() < ui_px(280);
     lv_obj_t *name_lbl = theme_label(row, name, narrow ? THEME_FONT_S : THEME_FONT_M, THEME_COL_TEXT);
-    int name_w = ui_content_w() - 2 * THEME_PAD - ui_px(44) - ui_px(116);
+    int name_w = ui_content_w() - 2 * THEME_PAD - ui_px(44) - ui_px(narrow ? 90 : 116);
     lv_obj_set_width(name_lbl, name_w);
-    lv_label_set_long_mode(name_lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_long_mode(name_lbl, LV_LABEL_LONG_CLIP);
     lv_obj_align(name_lbl, LV_ALIGN_LEFT_MID, ui_px(44), 0);
 
-    lv_obj_t *cur = theme_label(row, "--", THEME_FONT_L, col);
+    lv_obj_t *cur = theme_label(row, "--", narrow ? THEME_FONT_M : THEME_FONT_L, col);
     lv_obj_align(cur, LV_ALIGN_RIGHT_MID, narrow ? -ui_px(50) : -ui_px(58), 0);
 
     lv_obj_t *tgt = theme_label(row, "/0°", THEME_FONT_S, THEME_COL_TEXT_DIM);
@@ -274,11 +274,11 @@ static lv_obj_t *create(void)
     int reserve_bottom = ui_px(36) + ui_px(12) + gap;   /* 预设行高 + 底边距 + 间隔 */
     int card_h = (ui_scr_h() - y0 - reserve_bottom - gap) / 2;
 
-    row_ext_obj = make_row(scr, "Extruder", THEME_COL_EXTRUDER, ui_icon(&img_nozzle_32, NULL), card_h,
+    row_ext_obj = make_row(scr, "喷嘴", THEME_COL_EXTRUDER, ui_icon(&img_nozzle_32, NULL), card_h,
                            &lbl_ext_cur, &lbl_ext_tgt);
     lv_obj_align(row_ext_obj, LV_ALIGN_TOP_MID, 0, y0);
 
-    row_bed_obj = make_row(scr, "Heatbed", THEME_COL_BED, ui_icon(&img_bed_32, NULL), card_h,
+    row_bed_obj = make_row(scr, "热床", THEME_COL_BED, ui_icon(&img_bed_32, NULL), card_h,
                            &lbl_bed_cur, &lbl_bed_tgt);
     lv_obj_align(row_bed_obj, LV_ALIGN_TOP_MID, 0, y0 + card_h + gap);
 

@@ -208,6 +208,22 @@ const lv_font_t *ui_font_latin24(void)
 #endif
 }
 
+const lv_font_t *ui_font_value_compact(void)
+{
+#if defined(UI_FONT_SMALL)
+    return &font_cjk_10_cmp;   /* 160x128 已经是最小可读档 */
+#elif defined(UI_FONT_BIG)
+    return UI_FONT_BIG ? &font_latin_24 : &lv_font_montserrat_12;
+#elif defined(ESP_PLATFORM)
+    return small() ? &font_cjk_10
+         : big()   ? &font_latin_24 : &lv_font_montserrat_12;
+#else
+    return small() ? &font_cjk_10
+         : huge()  ? &lv_font_montserrat_32
+         : big()   ? &font_latin_24 : &lv_font_montserrat_12;
+#endif
+}
+
 /* 小屏(160x128) 0.45x 图标映射：base → _sm 变体（tools/icongen 生成） */
 static const struct { const lv_image_dsc_t *base, *sm; } icon_sm_map[] = {
     { &img_heater,          &img_heater_sm },
