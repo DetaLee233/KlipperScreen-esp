@@ -2,7 +2,7 @@
 
 **KlipperScreen-esp** is a compact, cross-platform display and controller for 3D printers. It runs on inexpensive ESP32 boards and Windows/macOS desktops, provides full **Klipper** control through **Moonraker**, and adds read-only **Bambu Cloud** monitoring on ESP32 and desktop. Its shared LVGL UI supports touch, rotary encoder, mouse, keyboard, or mixed input; the EC11 reference target demonstrates a rotary-only device.
 
-![On-device photo](screenshots/main_photo.png)
+![On-device photo](screenshots/main_photo.jpg)
 
 The separately named SDL2 **simulator** uses mock data for layout development, input experiments, and screenshot testing without a printer.
 

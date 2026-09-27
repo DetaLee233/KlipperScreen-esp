@@ -6,7 +6,7 @@
 
 
 <p align="center">
-  <img src="docs/screenshots/main_photo.png" alt="CYD 2432S028R 实机运行效果" width="720">
+  <img src="docs/screenshots/main_photo.jpg" alt="多设备实机运行效果" width="720">
 </p>
 
 **KlipperScreen-esp** 是一款紧凑的跨平台 3D 打印机显示与控制软件，可运行在低成本 ESP32 开发板以及 Windows/macOS 桌面端。它通过 **Moonraker** 完整控制 **Klipper** 打印机，并提供 **拓竹云端状态监视** 

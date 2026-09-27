@@ -2,7 +2,7 @@
 
 **KlipperScreen-esp** 是一款紧凑的跨平台 3D 打印机显示与控制软件，可运行在低成本 ESP32 开发板以及 Windows/macOS 桌面端。它通过 **Moonraker** 完整控制 **Klipper** 打印机，并在 ESP32 与桌面端提供只读的**拓竹云端状态监视**；共享 LVGL 界面支持触摸、旋转编码器、鼠标、键盘或混合输入，EC11 参考板则展示了完全不使用触摸屏的纯旋钮设备。
 
-![实机照片](screenshots/main_photo.png)
+![实机照片](screenshots/main_photo.jpg)
 
 单独命名的 SDL2 **模拟器**使用 mock 数据，无需连接打印机即可用于布局开发、输入实验和界面截图。
 

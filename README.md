@@ -8,7 +8,7 @@
 
 
 <p align="center">
-  <img src="docs/screenshots/main_photo.png" alt="KlipperScreen-esp running on a CYD 2432S028R" width="720">
+  <img src="docs/screenshots/main_photo.jpg" alt="KlipperScreen-esp running on multiple devices" width="720">
 </p>
 
 **KlipperScreen-esp** is a compact, cross-platform display and controller for 3D printers. It runs on inexpensive ESP32 dev boards as well as Windows/macOS desktops, fully controls **Klipper** printers through **Moonraker**, and provides **Bambu cloud status monitoring**.
