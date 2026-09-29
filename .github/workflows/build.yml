@@ -356,11 +356,14 @@ jobs:
         include:
           - { runs-on: ubuntu-22.04,     arch: x86_64 }
           - { runs-on: ubuntu-22.04-arm, arch: arm64 }
+          # armhf 无官方 runner，x86_64 上交叉编译（arm-linux-gnueabihf）
+          - { runs-on: ubuntu-22.04,     arch: armhf, cross: arm-linux-gnueabihf }
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build deps
+      - name: Install build deps (native)
+        if: ${{ !matrix.cross }}
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -369,6 +372,32 @@ jobs:
             libxss-dev libxkbcommon-dev libwayland-dev libwayland-bin wayland-protocols \
             libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev \
             libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libibus-1.0-dev
+
+      - name: Install armhf cross toolchain + multiarch deps
+        if: ${{ matrix.cross }}
+        run: |
+          sudo dpkg --add-architecture armhf
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build build-essential pkg-config curl ca-certificates \
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+            libx11-dev:armhf libxext-dev:armhf libxrandr-dev:armhf libxcursor-dev:armhf \
+            libxi-dev:armhf libxfixes-dev:armhf libxss-dev:armhf libxkbcommon-dev:armhf \
+            libwayland-dev:armhf wayland-protocols libegl1-mesa-dev:armhf \
+            libgles2-mesa-dev:armhf libdrm-dev:armhf libgbm-dev:armhf \
+            libasound2-dev:armhf libpulse-dev:armhf libudev-dev:armhf libdbus-1-dev:armhf
+          # SDL2 的 X11/Wayland 检测走 pkg-config，必须指向 armhf 的 .pc 目录
+          cat > /tmp/armhf.cmake <<'EOF'
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR arm)
+          set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+          set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+          set(CMAKE_FIND_ROOT_PATH /usr/arm-linux-gnueabihf /usr)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+          set(ENV{PKG_CONFIG_LIBDIR} "/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig")
+          EOF
 
       - name: Fetch LVGL v9.3.0 (third_party/lvgl is gitignored)
         run: |
@@ -381,9 +410,11 @@ jobs:
         run: |
           curl -L -o /tmp/sdl2.tar.gz https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz
           tar xzf /tmp/sdl2.tar.gz -C /tmp
+          TC=""
+          if [ -n "${{ matrix.cross }}" ]; then TC="-DCMAKE_TOOLCHAIN_FILE=/tmp/armhf.cmake"; fi
           cmake -S /tmp/SDL2-2.30.9 -B /tmp/sdl2-build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=OFF -DSDL_STATIC=ON \
-            -DCMAKE_INSTALL_PREFIX=/tmp/sdl2-install
+            -DCMAKE_INSTALL_PREFIX=/tmp/sdl2-install $TC
           cmake --build /tmp/sdl2-build
           cmake --install /tmp/sdl2-build
 
@@ -391,23 +422,34 @@ jobs:
         run: |
           curl -L -o /tmp/cjson.tar.gz https://github.com/DaveGamble/cJSON/archive/refs/tags/v1.7.18.tar.gz
           tar xzf /tmp/cjson.tar.gz -C /tmp
+          TC=""
+          if [ -n "${{ matrix.cross }}" ]; then TC="-DCMAKE_TOOLCHAIN_FILE=/tmp/armhf.cmake"; fi
           cmake -S /tmp/cJSON-1.7.18 -B /tmp/cjson-build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DENABLE_CJSON_TEST=OFF \
-            -DCMAKE_INSTALL_PREFIX=/tmp/cjson-install
+            -DCMAKE_INSTALL_PREFIX=/tmp/cjson-install $TC
           cmake --build /tmp/cjson-build
           cmake --install /tmp/cjson-build
 
       - name: Build KlipperScreen-esp (Linux)
         run: |
           cd src/ports/desktop
+          TC=""
+          if [ -n "${{ matrix.cross }}" ]; then TC="-DCMAKE_TOOLCHAIN_FILE=/tmp/armhf.cmake"; fi
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="/tmp/sdl2-install;/tmp/cjson-install"
+            -DCMAKE_PREFIX_PATH="/tmp/sdl2-install;/tmp/cjson-install" $TC
           cmake --build build --target KlipperScreen-esp
           # 静态链接验收：动态依赖里不得出现 SDL2 / cjson
-          if ldd build/KlipperScreen-esp | grep -Ei 'sdl|cjson'; then
-            echo "::error::SDL2/cJSON not statically linked"; exit 1
+          if [ -n "${{ matrix.cross }}" ]; then
+            arm-linux-gnueabihf-objdump -p build/KlipperScreen-esp | grep NEEDED
+            if arm-linux-gnueabihf-objdump -p build/KlipperScreen-esp | grep NEEDED | grep -Ei 'sdl|cjson'; then
+              echo "::error::SDL2/cJSON not statically linked"; exit 1
+            fi
+          else
+            if ldd build/KlipperScreen-esp | grep -Ei 'sdl|cjson'; then
+              echo "::error::SDL2/cJSON not statically linked"; exit 1
+            fi
+            ldd build/KlipperScreen-esp
           fi
-          ldd build/KlipperScreen-esp
 
       - name: Package tarball (bin + install.sh + systemd unit)
         run: |
@@ -460,6 +502,11 @@ jobs:
           name: desktop-linux-arm64-${{ github.ref_name }}
           path: dl/linux-arm64
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-armhf-${{ github.ref_name }}
+          path: dl/linux-armhf
+
       - name: Zip artifacts for release
         # 资产名不带版本号：releases/latest/download/<名字> 直链永远指向最新正式版，
         # 文档站板型页的下载链接依赖这一点
@@ -474,8 +521,13 @@ jobs:
           # artifact 往返可能丢 unix 执行位，zip 前先补回（zip 会保存权限位）
           (cd dl/desktop-mac && chmod +x KlipperScreen-esp klipper_remote_simulator && zip -r "$GITHUB_WORKSPACE/desktop-macos-arm64.zip" .)
           # Linux 产物在构建 job 里已打成 tar.gz（保留执行位），直接搬上来
-          cp dl/linux-x64/desktop-linux-x86_64.tar.gz dl/linux-arm64/desktop-linux-arm64.tar.gz "$GITHUB_WORKSPACE/"
-          ls -la "$GITHUB_WORKSPACE"/*.zip "$GITHUB_WORKSPACE"/*.tar.gz
+          cp dl/linux-x64/desktop-linux-x86_64.tar.gz dl/linux-arm64/desktop-linux-arm64.tar.gz \
+             dl/linux-armhf/desktop-linux-armhf.tar.gz "$GITHUB_WORKSPACE/"
+          # md5 边车：Linux 上位机"检查更新"下载后据此校验完整性
+          for f in desktop-linux-x86_64.tar.gz desktop-linux-arm64.tar.gz desktop-linux-armhf.tar.gz; do
+            (cd "$GITHUB_WORKSPACE" && md5sum "$f" > "$f.md5")
+          done
+          ls -la "$GITHUB_WORKSPACE"/*.zip "$GITHUB_WORKSPACE"/*.tar.gz "$GITHUB_WORKSPACE"/*.md5
 
       - uses: softprops/action-gh-release@v2
         with:
@@ -485,18 +537,22 @@ jobs:
             desktop-macos-arm64.zip
             desktop-linux-x86_64.tar.gz
             desktop-linux-arm64.tar.gz
+            desktop-linux-armhf.tar.gz
+            desktop-linux-x86_64.tar.gz.md5
+            desktop-linux-arm64.tar.gz.md5
+            desktop-linux-armhf.tar.gz.md5
           # 板型产物说明（引脚/接线/刷机地址）见文档站，自动生成 notes 会附加在其后
           body: |
             **Supported boards / 支持的板型**: https://umeiko.github.io/KlipperScreen-esp/boards/
 
-            每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面端；`desktop-linux-x86_64.tar.gz` 与 `desktop-linux-arm64.tar.gz` 是 Linux 上位机预编译包（静态链接 SDL2，解压后运行 `install.sh`，可选 systemd 独占显示服务或桌面 App，支持 Wayland-weston / X11）。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
+            每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面端；`desktop-linux-x86_64.tar.gz` / `desktop-linux-arm64.tar.gz` / `desktop-linux-armhf.tar.gz` 是 Linux 上位机预编译包（静态链接 SDL2，解压后运行 `install.sh`，可选 systemd 独占显示服务或桌面 App，支持 Wayland-weston / X11）。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
 
             **本版更新 / What's new**
-            - 新增：Linux 上位机与带 PSRAM 的 ESP32 支持 G-code 缩略图；ESP32 通过 Moonraker metadata 异步下载并在 PSRAM 中解码，文件详情与打印状态页均可显示 / G-code thumbnails for Linux hosts and PSRAM-equipped ESP32 boards, fetched asynchronously through Moonraker metadata
-            - 完善：方屏/横屏打印状态布局由缩略图替代进度环主视觉，百分比下沉；文件详情长文件名单行循环滚动 / Thumbnail-first square and landscape job-status layout, plus scrolling long filenames
-            - 修复：LVGL lodepng 返回对象误当像素导致 ESP32 缩略图雪花、黑块与越界读取 / Fix corrupted ESP32 thumbnails caused by treating LVGL's lodepng draw-buffer wrapper as raw pixels
-            - 修复：Linux 缩略图异步投递、图片缓存销毁与 SDL kiosk 关闭路径的竞态和崩溃 / Fix Linux crashes in thumbnail delivery, image-cache teardown, and SDL kiosk close handling
-            - 修复：Moonraker 切换打印机后的热循环断连；法语、意大利语等长键值在独立栏内滚动，不再互相遮挡 / Fix reconnect loops after switching printers and prevent long localized key/value labels from overlapping
+            - 新增：Linux 版"关于本机"内可检查更新——查询 GitHub latest release、下载对应架构包、md5 校验，可暂停/取消，确认后原地替换二进制并由 systemd 拉起 / In-app self-update for Linux hosts with pause/cancel, MD5 verification and atomic binary swap
+            - 新增：Linux 崩溃信号（SIGSEGV 等）backtrace 落盘到日志，启动脚本按自然日轮转（保留一天），日志不再无限增长 / Crash backtraces logged to file on Linux; daily log rotation
+            - 新增：desktop-linux-armhf（32 位 ARM，如旧款树莓派）构建 / New desktop-linux-armhf build for 32-bit ARM hosts
+            - 完善：Linux 板型显示带工具链与架构（如 GCC-Linux-arm64）；检查更新页显示来源与包名；关于页双行子栏不再嵌套滚动；亮度下限钳到 5% / Board name now shows toolchain+arch; about panel no nested scrolling; brightness floor at 5%
+            - 修复：归零 XY 只归零 X；90/270° 旋转及长列表时下拉框被标题栏遮挡点不到首项 / Fix G28 XY homing only X; fix dropdown lists hidden under the title bar
           generate_release_notes: true
           # 标签含 wip（如 v0.2.0-wip.1）时标为预发布，不抢占 latest
           prerelease: ${{ contains(github.ref_name, 'wip') }}
