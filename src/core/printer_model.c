@@ -235,8 +235,9 @@ void printer_home(int axis)
 {
     if (!klipper_active()) return;
     char g[16];
-    if (axis < 0) snprintf(g, sizeof(g), "G28");
-    else          snprintf(g, sizeof(g), "G28 %c", "XYZ"[axis]);
+    if (axis < 0)       snprintf(g, sizeof(g), "G28");
+    else if (axis == 3) snprintf(g, sizeof(g), "G28 X Y");
+    else                snprintf(g, sizeof(g), "G28 %c", "XYZ"[axis]);
     klipper_gcode_script(g);
 }
 

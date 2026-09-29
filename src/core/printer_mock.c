@@ -92,6 +92,7 @@ void printer_jog(int axis, float dist)
 void printer_home(int axis)
 {
     if (axis < 0) { P.homed[0] = P.homed[1] = P.homed[2] = 1; P.pos[0] = P.pos[1] = P.pos[2] = 0; }
+    else if (axis == 3) { P.homed[0] = P.homed[1] = 1; P.pos[0] = P.pos[1] = 0; }
     else { P.homed[axis] = 1; P.pos[axis] = 0; }
 }
 

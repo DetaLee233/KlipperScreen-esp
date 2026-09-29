@@ -248,6 +248,16 @@ lv_obj_t *theme_row_link(lv_obj_t *scr, const char *key, const char *val, int y,
     return row;
 }
 
+/* 下拉列表打开时挪到顶层：标题栏挂在 lv_layer_top()，列表默认 re-parent 到
+   screen 会被标题栏盖住（向上展开时第一项点不到）。READY 在 open() 把列表
+   挂到 screen 之后发送，这里再挪一次即压在标题栏之上；dropdown 析构会
+   无条件删除 list，换 parent 无泄漏。 */
+static void dd_list_top_cb(lv_event_t *e)
+{
+    lv_obj_t *list = lv_dropdown_get_list(lv_event_get_target(e));
+    if (list) lv_obj_set_parent(list, lv_layer_top());
+}
+
 /* 带下拉的设置行（语言/自动息屏/主题共用样式）；icon 非 NULL 时在文字前加小图标 */
 lv_obj_t *theme_row_dropdown(lv_obj_t *scr, const char *key, const char *options,
                              int y, int sel, lv_event_cb_t cb, const void *icon)
@@ -291,6 +301,7 @@ lv_obj_t *theme_row_dropdown(lv_obj_t *scr, const char *key, const char *options
     lv_obj_set_style_bg_opa(list, LV_OPA_COVER, LV_PART_SELECTED);
     lv_dropdown_set_selected(dd, sel);
     lv_obj_add_event_cb(dd, cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(dd, dd_list_top_cb, LV_EVENT_READY, NULL);
     theme_focusable(dd);
     return row;
 }

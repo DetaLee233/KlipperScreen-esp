@@ -77,7 +77,7 @@ bool printer_take_error(char *out, size_t cap);
 void printer_set_target_ext(float t);
 void printer_set_target_bed(float t);
 void printer_jog(int axis, float dist);       /* 相对点动 */
-void printer_home(int axis);                  /* -1 = 全部归位 */
+void printer_home(int axis);                  /* 0/1/2=X/Y/Z，3=XY，-1=全部归位 */
 void printer_motors_off(void);                /* M84：关闭全部步进电机 */
 void printer_extrude(float mm);               /* 正=挤出 负=回抽 */
 void printer_print_start(const char *filename);

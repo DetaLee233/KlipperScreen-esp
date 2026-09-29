@@ -91,7 +91,7 @@ static lv_obj_t *create(void)
 
     /* 归位行：三枚按钮三分内容宽 */
     static const struct { const char *icon, *t; int axis; } homes[] = {
-        {LV_SYMBOL_HOME, "XY", 0}, {LV_SYMBOL_HOME, "Z", 2}, {LV_SYMBOL_HOME, "全部", -1},
+        {LV_SYMBOL_HOME, "XY", 3}, {LV_SYMBOL_HOME, "Z", 2}, {LV_SYMBOL_HOME, "全部", -1},
     };
     int hw = (ui_content_w() - 2 * gap) / 3;
     for (int i = 0; i < 3; i++) {
@@ -100,7 +100,6 @@ static lv_obj_t *create(void)
         lv_obj_align(b, LV_ALIGN_BOTTOM_LEFT, ui_px(8) + i * (hw + gap), -ui_px(6));
         lv_obj_add_event_cb(b, on_home, LV_EVENT_CLICKED, (void *)(intptr_t)homes[i].axis);
     }
-    /* 注：mock 的 Home XY 简化为归 X（演示用） */
 
     return scr;
 }
