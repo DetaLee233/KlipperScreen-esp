@@ -49,8 +49,9 @@ fi
 PKG_TMP=""
 if [ ! -f "$SCRIPTPATH/bin/KlipperScreen-esp" ]; then
     case "$(uname -m)" in
-        x86_64|amd64)  PKG_ARCH=x86_64 ;;
-        aarch64|arm64) PKG_ARCH=arm64 ;;
+        x86_64|amd64)      PKG_ARCH=x86_64 ;;
+        aarch64|arm64)     PKG_ARCH=arm64 ;;
+        armv7l|armv6l|armhf) PKG_ARCH=armhf ;;
         *) echo_error "Unsupported architecture: $(uname -m)"; exit 1 ;;
     esac
     PKG_TMP=$(mktemp -d)

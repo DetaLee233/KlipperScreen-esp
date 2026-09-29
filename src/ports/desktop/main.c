@@ -140,6 +140,9 @@ int main(int argc, char **argv)
     /* 服务模式 stdout 重定向到 printer_data 日志文件：行缓冲保证诊断
        信息（backlight/power key/连接状态）及时落盘，否则全缓冲要攒 4KB */
     setvbuf(stdout, NULL, _IOLBF, 0);
+#if BSP_HAS_LINUX_HOST
+    bsp_linux_crash_handler_install();   /* 致命信号落日志（backtrace）再死 */
+#endif
     bsp_init();
     /* 播种平台默认打印机必须在任何 settings 读取之前：machine_mode 的旧版
        兼容写会顺手创建 moonraker.conf，抢在播种前面会让"文件不存在"判据失效 */

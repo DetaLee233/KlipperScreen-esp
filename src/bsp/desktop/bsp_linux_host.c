@@ -28,6 +28,12 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#if defined(__GLIBC__)
+#include <execinfo.h>   /* backtrace/backtrace_symbols_fd */
+#endif
+#include <signal.h>
+#include <time.h>
+
 /* ---------- sysfs 背光 ---------- */
 
 static char bl_brightness_path[256];
@@ -161,6 +167,47 @@ void bsp_linux_powerkey_poll(void)
                 bsp_screen_toggle();
         }
     }
+}
+
+
+/* ---------- 崩溃日志 ----------
+ * SIGSEGV/SIGABRT 等致命信号落一条带时间戳和 backtrace 的记录到 stderr
+ *（服务模式下 start.sh 已把 stderr 重定向进 printer_data/logs 日志文件；
+ *  Weston 的 stdout 也走同一文件，天然汇合）。只写不 malloc，
+ * backtrace_symbols_fd 直接 fd 输出；然后还原默认处理重新触发，
+ * 保证 systemd 看到的仍是信号死亡（journal 里 status=139 语义不变）。 */
+static void crash_dump(int sig)
+{
+    char hdr[160];
+    time_t now = time(NULL);
+    struct tm tmv;
+    localtime_r(&now, &tmv);
+    int n = snprintf(hdr, sizeof(hdr),
+                     "\n*** CRASH signal %d at %04d-%02d-%02d %02d:%02d:%02d ***\n",
+                     sig, tmv.tm_year + 1900, tmv.tm_mon + 1, tmv.tm_mday,
+                     tmv.tm_hour, tmv.tm_min, tmv.tm_sec);
+    if (n > 0) (void)!write(STDERR_FILENO, hdr, (size_t)n);
+#if defined(__GLIBC__)
+    void *bt[32];
+    int c = backtrace(bt, 32);
+    if (c > 0) backtrace_symbols_fd(bt, c, STDERR_FILENO);
+#endif
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+
+void bsp_linux_crash_handler_install(void)
+{
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = crash_dump;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESETHAND;
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGBUS, &sa, NULL);
+    sigaction(SIGFPE, &sa, NULL);
+    sigaction(SIGILL, &sa, NULL);
 }
 
 #endif /* BSP_HAS_LINUX_HOST */

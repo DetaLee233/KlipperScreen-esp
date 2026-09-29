@@ -4,6 +4,7 @@
 #include "theme.h"
 #include "ui_nav.h"
 #include "printer.h"
+#include "bsp_caps.h"
 #include <string.h>
 
 /* ---------- 面板注册表（panels 目录下实现，集中声明） ---------- */
@@ -26,6 +27,9 @@ extern panel_def_t panel_bambu_link_def;
 extern panel_def_t panel_bambu_setup_def;
 extern panel_def_t panel_printers_def;
 extern panel_def_t panel_brightness_def;
+#if BSP_HAS_LINUX_HOST
+extern panel_def_t panel_update_def;
+#endif
 
 static panel_def_t *registry[] = {
     &panel_main_def,
@@ -47,6 +51,9 @@ static panel_def_t *registry[] = {
     &panel_bambu_setup_def,
     &panel_printers_def,
     &panel_brightness_def,
+#if BSP_HAS_LINUX_HOST
+    &panel_update_def,
+#endif
 };
 
 #define REG_COUNT (sizeof(registry) / sizeof(registry[0]))

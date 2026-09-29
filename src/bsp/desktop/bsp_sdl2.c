@@ -333,7 +333,25 @@ void bsp_restart(void)
     exit(0);
 }
 
-const char *bsp_board_name(void) { return "desktop"; }
+/* 桌面端板型名带工具链+平台+架构，关于页/自更新排查时一眼可辨 */
+const char *bsp_board_name(void)
+{
+#if defined(_WIN32)
+    return "MinGW-Win-x86_64";
+#elif defined(__APPLE__)
+    return "Clang-macOS-arm64";
+#elif defined(__aarch64__)
+    return "GCC-Linux-arm64";
+#elif defined(__arm__)
+    return "GCC-Linux-armhf";
+#elif defined(__x86_64__)
+    return "GCC-Linux-x86_64";
+#elif defined(__i386__)
+    return "GCC-Linux-x86";
+#else
+    return "desktop";
+#endif
+}
 
 /* 桌面端调试前端：反色/旋转/镜像不提供（UI 会按 can_* 隐藏开关） */
 bool bsp_disp_can_invert(void)    { return false; }

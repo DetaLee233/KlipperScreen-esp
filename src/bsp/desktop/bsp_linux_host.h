@@ -19,6 +19,11 @@ int bsp_linux_backlight_apply(int pct);
  * 用于调用方判断"息屏是否完全无手段"并向用户提示。 */
 int bsp_linux_dpms_ok(void);
 
+/* 安装致命信号（SIGSEGV/SIGABRT/SIGBUS/SIGFPE/SIGILL）的崩溃日志处理器：
+ * 往 stderr 落时间戳 + backtrace（服务模式下即 printer_data 日志文件）。
+ * main() 起始处调用一次。 */
+void bsp_linux_crash_handler_install(void);
+
 /* 主循环周期调用（LVGL 任务上下文，~5ms）：读电源键，按下即息屏/唤醒切换。 */
 void bsp_linux_powerkey_poll(void);
 

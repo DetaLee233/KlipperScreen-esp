@@ -15,6 +15,10 @@ export KLIPPER_FULLSCREEN=1
 LOG_DIR="${HOME:-}/printer_data/logs"
 if [ -n "${HOME:-}" ] && [ -d "$LOG_DIR" ]; then
     LOG_FILE="$LOG_DIR/KlipperScreen-esp.log"
+    # 按自然日轮转：旧日志改名 .1 只留一天（崩溃排查刚好够用），再开新文件
+    if [ -f "$LOG_FILE" ] && [ "$(date -r "$LOG_FILE" +%F 2>/dev/null)" != "$(date +%F)" ]; then
+        mv "$LOG_FILE" "$LOG_FILE.1"
+    fi
     # 超 4MB 截断保留尾部 2MB，避免长期运行撑爆磁盘
     if [ -f "$LOG_FILE" ] && [ "$(stat -c %s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 4194304 ]; then
         tail -c 2097152 "$LOG_FILE" > "$LOG_FILE.tmp" && mv "$LOG_FILE.tmp" "$LOG_FILE"

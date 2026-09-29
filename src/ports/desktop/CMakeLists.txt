@@ -42,6 +42,7 @@ set(DESKTOP_COMMON_SRCS
     ${SRC_ROOT}/bsp/desktop/bsp_conf_file.c
     ${SRC_ROOT}/core/app_settings.c
     ${SRC_ROOT}/core/gcode_thumbnail.c
+    ${SRC_ROOT}/core/self_update.c
     ${UI_SRCS}
 )
 
@@ -140,6 +141,10 @@ else()
         ${SRC_ROOT}/core/bambu_cloud_stub.c
     )
     configure_desktop_target(KlipperScreen-esp)
+    if(NOT APPLE)
+        # -rdynamic：崩溃处理器的 backtrace 才能打出符号名（仅 Linux 有意义）
+        set_target_properties(KlipperScreen-esp PROPERTIES ENABLE_EXPORTS ON)
+    endif()
     # 代码写的是 #include "cJSON.h"，而头文件实际装在 include/cjson/ 子目录。
     # config 包会把 CJSON_INCLUDE_DIR 预设成 .../include 本体（不含子目录），
     # 所以换个变量名强制真实搜索（brew 实测踩坑）

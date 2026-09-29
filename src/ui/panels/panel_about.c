@@ -8,6 +8,7 @@
 #include "../ui_nav.h"
 #include "version.h"
 #include "bsp.h"
+#include "bsp_caps.h"
 
 #include <stdio.h>
 #ifdef ESP_PLATFORM
@@ -27,17 +28,26 @@ static int row2(lv_obj_t *scr, const char *key, const char *val, int y)
     lv_obj_t *row = theme_card(scr);
     lv_obj_set_size(row, ui_content_w(), ui_px(56));
     lv_obj_align(row, LV_ALIGN_TOP_MID, 0, y);
+    /* 卡片自身不可滚动：长值换行溢出会让卡片长出滚动条，在可滚动的
+       关于页里形成嵌套滚动（滚轮/拖动被内层抢走），内容宁可裁掉 */
+    lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
-    lv_obj_set_width(k, ui_content_w() - 2 * THEME_PAD - ui_px(4));
-    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_TOP_LEFT, ui_px(2), ui_px(4));
     lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
     lv_obj_set_width(v, ui_content_w() - 2 * THEME_PAD - ui_px(4));
-    lv_label_set_long_mode(v, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_long_mode(v, LV_LABEL_LONG_CLIP);   /* 单行裁断，不换行溢出 */
     lv_obj_align(v, LV_ALIGN_TOP_LEFT, ui_px(2), ui_px(28));
     return ui_px(57);
 }
+
+#if BSP_HAS_LINUX_HOST
+static void open_update(lv_event_t *e)
+{
+    (void)e;
+    panel_mgr_open("update");
+}
+#endif
 
 static lv_obj_t *create(void)
 {
@@ -61,6 +71,11 @@ static lv_obj_t *create(void)
     }
 #else
     y += row2(scr, "框架", "SDL2 · LVGL 9.3", y);
+#endif
+
+#if BSP_HAS_LINUX_HOST
+    y += ui_gap(4);
+    theme_row_link(scr, "检查更新", "", y, open_update);
 #endif
 
     /* 纯列表页：左 = 返回（ui_nav 白名单） */
