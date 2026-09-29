@@ -13,7 +13,7 @@ static lv_obj_t *lbl_pct;
 
 static void update_label(int pct)
 {
-    char buf[8];
+    char buf[16];
     snprintf(buf, sizeof(buf), "%d%%", pct);
     lv_label_set_text(lbl_pct, buf);
 }
