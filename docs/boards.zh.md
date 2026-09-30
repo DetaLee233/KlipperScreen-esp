@@ -57,7 +57,7 @@
 
 - 主控：ESP32（双核 240MHz，520KB SRAM），4MB QIO Flash
 - 显示：ILI9341，SPI2 @ 40MHz，DMA 双缓冲（2 × 40 行）
-- 触摸：XPT2046 电阻屏，**独立 SPI3 总线**（实测与 LCD 共享总线时 MISO 无应答）；出厂触摸校准已内置
+- 触摸：XPT2046 电阻屏，**独立 SPI3 总线**（与 LCD 不同总线）；出厂触摸校准已内置
 - 背光：GPIO21，LEDC PWM 8bit/5kHz，高电平点亮
 
 | 功能 | GPIO | 备注 |
@@ -112,7 +112,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 - 主控：ESP32-WROOM-32E（双核 240MHz），4MB QIO Flash
 - 显示：ST7796U，SPI2 @ 40MHz；**与触摸屏共用 SPI 总线**（厂商设计）；无独立 RST（与 ESP32 EN 共用，驱动走软件复位）
-- 触摸：XPT2046 电阻屏，共用 SPI2；出厂触摸校准已内置（提取自真机，免校准；个体差异可用串口 CLI `caltouch` 重校）
+- 触摸：XPT2046 电阻屏，共用 SPI2；出厂触摸校准已内置（个体差异可用串口 CLI `caltouch` 重校）
 - 背光：GPIO27，高电平点亮
 
 | 功能 | GPIO | 备注 |
@@ -134,7 +134,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ![esp32s3-st7789-320_240-ec11 Fritzing 参考接线](screenshots/boards/ec11_knob_minimal_breadboard.zh.png)
 
-这是一个可以直接用杜邦线搭起来的官方参考机型：**ESP32-S3-DevKitC-1 N16R8 + 8 针 240×320 ST7789 SPI 屏 + KY-040/EC11 旋钮模块**。它沿用贡献者在 [PR #6](https://github.com/umeiko/KlipperScreen-esp/pull/6) 和 [Issue #5](https://github.com/umeiko/KlipperScreen-esp/issues/5) 中实机验证的屏幕与旋钮引脚，只保留最小系统需要的两件外设。逻辑分辨率为 **320×240 横屏**。
+这是一个可以直接用杜邦线搭起来的官方参考机型：**ESP32-S3-DevKitC-1 N16R8 + 8 针 240×320 ST7789 SPI 屏 + KY-040/EC11 旋钮模块**。逻辑分辨率为 **320×240 横屏**。
 
 可下载并修改 [Fritzing 源文件（.fzz）](hardware/ec11_knob_minimal.fzz)，也可以查看 [Fritzing 导出的 SVG](hardware/ec11_knob_minimal_breadboard.svg)。图中的 ST7789 是引脚顺序相同的通用 8 针模块；不同卖家的 PCB 外形、颜色和丝印位置可能不同。
 
@@ -233,10 +233,10 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 *240×320 ILI9341 SPI 屏搭配 EC11 编码器旋钮（图为纵维立方 Kobra 2 Neo 的原厂显示屏组件）。排针一般印 GND / VCC / SCL / SDA / RES / DC / CS / BLK——这里的 `SCL`/`SDA` 是 SPI 的 SCLK 和 MOSI，不是 I2C。*
 
-与 esp32-st7789-320_240-ec11 **同款主控（ESP32）、完全相同引脚**（全部对齐 CYD 2432S028R）的纯旋钮中屏机型：240×320 ILI9341 SPI 屏 + EC11 编码器，无触摸。逻辑分辨率 **320×240 横屏**——标准布局档，与 CYD 一致。相对 ST7789 机型只是换了一块屏，所有接线原位不动。参考项目：[kobra2neo-klipper](https://github.com/cheadrian/kobra2neo-klipper)。
+与 esp32-st7789-320_240-ec11 **同款主控（ESP32）、完全相同引脚**（全部对齐 CYD 2432S028R）的纯旋钮中屏机型：240×320 ILI9341 SPI 屏 + EC11 编码器，无触摸。逻辑分辨率 **320×240 横屏**——标准布局档，与 CYD 一致。相对 ST7789 机型只是换了一块屏，所有接线原位不动。
 
 - 主控：ESP32（双核 240MHz，520KB SRAM），4MB QIO Flash
-- 显示：ILI9341，走 esp_lcd 官方驱动（面板 BGR，默认 INVOFF 即正常颜色，无需强制反色；面板参数沿用 CYD 实测值）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）
+- 显示：ILI9341，走 esp_lcd 官方驱动（面板 BGR，默认 INVOFF 即正常颜色）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）
 - 输入：仅 EC11（PCNT 硬件正交解码）；无触摸层，不会进入触摸校准
 - 背光：GPIO21，LEDC PWM 8bit/5kHz，高电平点亮
 - 息屏/唤醒：板载 BOOT 键（GPIO0）
@@ -267,7 +267,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 与 esp32-ILI9341-320_240-ec11 **同款主控（ESP32）、完全相同引脚**（全部对齐 CYD 2432S028R）的纯旋钮中屏机型：240×320 ST7796 SPI 屏 + EC11 编码器，无触摸。逻辑分辨率 **320×240 横屏**——标准布局档，与 CYD 一致。相对 ILI9341 机型只是换了显示控制器，所有接线原位不动。
 
 - 主控：ESP32（双核 240MHz，520KB SRAM），4MB QIO Flash
-- 显示：ST7796，走 esp_lcd 官方驱动（面板 BGR，默认 INVOFF 即正常颜色；驱动、颜色格式与反色语义复用 E32R35T / esp32s3-st7796-480_320-xpt2046-ec11 的已验证实现）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）
+- 显示：ST7796，走 esp_lcd 官方驱动（面板 BGR，默认 INVOFF 即正常颜色）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）
 - 输入：仅 EC11（PCNT 硬件正交解码）；无触摸层，不会进入触摸校准
 - 背光：GPIO21，LEDC PWM 8bit/5kHz，高电平点亮
 - 息屏/唤醒：板载 BOOT 键（GPIO0）
@@ -287,7 +287,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | EC11 SW / KEY | GPIO27 | 内部上拉，低电平有效 |
 | EC11 C / GND | GND | A/B/SW 公共端接地 |
 
-不同卖家的 ST7796 模组在 320×240 窗口下有差异：画面镜像/颠倒或边缘出现彩边/偏移时，改 `src/bsp/esp32/bsp_esp32_st7796_ec11.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 重新编译即可（初始值沿用 480×320 ST7796 模组的横屏语义，需实机确认）。EC11 的旋转与按下都能导航，屏幕自动熄灭后再次操作旋钮即可唤醒。
+不同卖家的 ST7796 模组在 320×240 窗口下有差异：画面镜像/颠倒或边缘出现彩边/偏移时，改 `src/bsp/esp32/bsp_esp32_st7796_ec11.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 重新编译即可。EC11 的旋转与按下都能导航，屏幕自动熄灭后再次操作旋钮即可唤醒。
 
 ## esp32s3-st7796-480_320-xpt2046-ec11
 
@@ -297,7 +297,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 *本机型的典型板子——MKS TS35 V2.0：480×320 ST7796S 屏 + XPT2046 电阻触摸，板载 EC11 旋钮。*
 
-与 esp32s3-st7789-320_240-ec11 **同款 ESP32-S3-DevKitC-1 N16R8 底座**的 480×320 电阻屏机型：ST7796S SPI 屏与 XPT2046 触摸**共用一条 SPI 总线**，EC11 旋钮沿用不变的参考引脚。逻辑分辨率 **480×320 横屏**（与 E32R35T 同一布局档）。出厂触摸校准已内置（提取自 MKS TS35 V2.0 真机两点校准结果）；个体差异可用串口 CLI `caltouch` 强制重校，校准结果存 `touch.json`，之后开机直接加载。
+与 esp32s3-st7789-320_240-ec11 **同款 ESP32-S3-DevKitC-1 N16R8 底座**的 480×320 电阻屏机型：ST7796S SPI 屏与 XPT2046 触摸**共用一条 SPI 总线**，EC11 旋钮沿用不变的参考引脚。逻辑分辨率 **480×320 横屏**（与 E32R35T 同一布局档）。出厂触摸校准已内置；个体差异可用串口 CLI `caltouch` 强制重校，校准结果存 `touch.json`，之后开机直接加载。
 
 | 模块引脚 | 接到 ESP32-S3 | 用途 |
 |---|---|---|
@@ -317,7 +317,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | EC11 GND / C | GND | A/B/SW 公共端接地 |
 | 息屏按钮（外挂） | GPIO39 ── 按键 ── GND | 一键息屏/唤醒，内部上拉、低电平有效；板载 BOOT 键（GPIO0）功能相同 |
 
-开发板从 USB-C 供电。触摸与旋钮可同时使用——触摸走指针手势，旋钮走焦点导航。显示镜像/旋转沿用 E32R35T 同款面板的实测默认值；个别单元画面颠倒时，在 **设置 → 显示 → 180° 旋转** 里切换即可，不用改接线。
+开发板从 USB-C 供电。触摸与旋钮可同时使用——触摸走指针手势，旋钮走焦点导航。个别单元画面颠倒时，在 **设置 → 显示 → 180° 旋转** 里切换即可，不用改接线。
 
 这套配置正好可以直接驱动 **Makerbase MKS TS35 V2.0**——接线参考下图：
 
@@ -353,7 +353,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 固件已处理的 ILI9488 特性：
 
-- ILI9488 走 4 线 SPI 时只收 **18-bit RGB666 像素**（COLMOD=0x66）。面板驱动（[atanisoft/esp_lcd_ili9488](https://components.espressif.com/components/atanisoft/esp_lcd_ili9488)）内部从 RGB565 转换，像素流量为 3 字节/像素（同时钟下比 ST7796 多约 50%）
+- ILI9488 走 4 线 SPI 时只收 **18-bit RGB666 像素**（COLMOD=0x66）。面板驱动（[atanisoft/esp_lcd_ili9488](https://components.espressif.com/components/atanisoft/esp_lcd_ili9488)）内部从 RGB565 转换
 - 个别个体画面呈底片或方向不对时，用**设置 → 显示 → 反色 / 180° 旋转 / 水平镜像**修正即可，不用重刷固件
 - PI-TS35 原生插 MKS PI 上位机板的 2×20 排母；接到 DevKit 时按 [MKS-TFT-Hardware](https://github.com/makerbase-mks/MKS-TFT-Hardware) 原理图把排母上的 SCK/MOSI/MISO/CS/DC/RST/BL/T_CS 网络对应到上面的引脚表
 
@@ -381,7 +381,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | EC11 GND / C | GND | A/B/SW 公共端接地 |
 | 息屏按钮（外挂） | GPIO39 ── 按键 ── GND | 一键息屏/唤醒，内部上拉、低电平有效；板载 BOOT 键（GPIO0）功能相同 |
 
-开发板从 USB-C 供电。ILI9341 沿用 CYD 上实测的面板参数（BGR 色彩顺序、不开反色）；个别个体画面呈底片或方向不对时，用**设置 → 显示 → 反色 / 180° 旋转 / 水平镜像**修正即可，不用重刷固件。
+开发板从 USB-C 供电。面板为 BGR 色彩顺序、不开反色；个别个体画面呈底片或方向不对时，用**设置 → 显示 → 反色 / 180° 旋转 / 水平镜像**修正即可，不用重刷固件。
 
 ## JC8048W550
 
@@ -391,12 +391,12 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 *Guition 5" 电容屏模组（ESP32-S3）。* 图：[openHASP 硬件页](https://www.openhasp.com/0.7.0/hardware/guition/jc8048w550/)
 
-逻辑分辨率 **800×480**。RGB 并口屏的撕裂/抽动排障全过程见[开发笔记](jc8048w550-rgb-display-guide.md)。
+逻辑分辨率 **800×480**。
 
 - 主控：ESP32-S3，16MB Flash + PSRAM（双帧缓冲 2×768KB 放在 PSRAM）
-- 显示：ST7262 RGB 并口（RGB565），PCLK **必须 16MHz**；自研 rgb44 驱动（IDF 4.4 传输模型 + vsync 换页）
+- 显示：ST7262 RGB 并口（RGB565），PCLK **必须 16MHz**；自研 rgb44 驱动
 - 触摸：GT911 电容屏，I2C0，轮询无 INT，无需校准
-- 背光：GPIO2，高电平点亮，80–100% 区间有硬件曲线补偿
+- 背光：GPIO2，高电平点亮
 
 | 功能 | GPIO |
 |---|---|
@@ -419,10 +419,10 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 逻辑分辨率 **480×480**。
 
 - 主控：ESP32-S3-WROOM-1-N8R8，8MB QIO Flash + 8MB Octal PSRAM @ 80MHz
-- 显示：ST7701S RGB 并口（RGB565），PCLK 12MHz（约 42fps）；与 JC8048W550 同款自研 **rgb44** 驱动（IDF 4.4 传输模型 + vsync 换页，LVGL DIRECT 双帧缓冲 2×450KB 放 PSRAM）。面板初始化走位 bang 3 线 9-bit SPI——SCK/MOSI 是真 GPIO，CS/RST 挂在 TCA9535 扩展器上——初始化序列照抄官方 Seeed SDK
+- 显示：ST7701S RGB 并口（RGB565），PCLK 12MHz（约 42fps）；与 JC8048W550 同款自研 **rgb44** 驱动（LVGL DIRECT 双帧缓冲放 PSRAM）。面板初始化走位 bang 3 线 9-bit SPI——SCK/MOSI 是真 GPIO，CS/RST 挂在 TCA9535 扩展器上
 - IO 扩展器：TCA9535，I2C0（先探 0x20，后期批次回退 0x39）；还挂着 RP2040 的复位线（拉高释放——RP2040 跑出厂固件，与本项目无关）
 - 触摸：FT5x06 电容屏，与扩展器共用 I2C0，TP_RST 也在扩展器上（建驱动前先手动复位），无需校准
-- 背光：GPIO45，LEDC PWM，高电平点亮（strapping 脚，官方 SDK 同样用法）
+- 背光：GPIO45，LEDC PWM，高电平点亮
 - 息屏/唤醒：侧键（GPIO38，低电平有效）
 - 烧录请用 **"USB-SERIAL"（CH340）那个 Type-C 口**——ESP32-S3 侧，控制台 UART0 @ 115200。另一个口是 RP2040 的原生 USB，**不要**用它
 
@@ -450,9 +450,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 逻辑分辨率 **320×240 横屏**。
 
 - 主控：ESP32-S3-WROOM-1-N16R8，16MB QIO Flash + 8MB Octal PSRAM @ 80MHz
-- 显示：ST7789（原生 240×320），SPI3 @ 80MHz **mode 3**，DMA 双缓冲（2 × 40 行）；BGR，横屏 MADCTL=0x68（MX|MV|BGR），**必须 INVON**（INVOFF 全屏反色；`bsp_disp_set_invert` 开关语义已取反）
-- **LCD CS 不是 GPIO**：在 PCA9557（I2C 0x19）P0 上，且面板要求**每笔 SPI 交易都有 CS 下降沿**（CS 常低/常高均全黑）。esp_lcd 无法经 I2C 扩展器逐笔翻 CS，故本板 BSP 不用 esp_lcd 面板驱动，直接 SPI master + 手动控 CS/DC（复刻实测可亮的 [Arduino 参考工程](https://github.com/umeiko/jlc-shizhanpai-esp32s3-arduino-lvgl) 及其 TFT_eSPI fork 的 CS 挂钩方案）；无 RST 脚，初始化必须先 SWRESET(0x01)+150ms
-- PCA9557 其余引脚按 Arduino 工程实测状态：P1 保持输入，P2=0（"摄像头电源"开启，疑似与 TFT 逻辑供电共用，P2=1 时背光亮但整屏黑）
+- 显示：ST7789（原生 240×320），SPI3 @ 80MHz **mode 3**，DMA 双缓冲（2 × 40 行）；BGR，横屏 MADCTL=0x68（MX|MV|BGR），**必须 INVON（反色开启）**
+- **LCD CS 不是 GPIO**：在 PCA9557（I2C 0x19）P0 上，且面板要求**每笔 SPI 交易都有 CS 下降沿**，故本板不用 esp_lcd 面板驱动，直接 SPI master + 手动控 CS/DC；无 RST 脚，初始化以 SWRESET(0x01) 开始
 - 触摸：FT6336 电容屏，与 PCA9557 同一条 I2C0 总线，轮询无 INT/RST，无需校准
 - 背光：GPIO42，LEDC PWM 10bit/5kHz，**低电平点亮**（`output_invert` 方式驱动）
 - 息屏/唤醒：板载用户键（GPIO0）
@@ -477,8 +476,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 逻辑分辨率 **320×240 横屏**。
 
 - 主控：ESP32-S3（双核 240MHz），16MB QIO Flash + 8MB Octal PSRAM @ 80MHz
-- 显示：T320B7-C12-16 3.2" IPS（ST7789，原生 240×320），SPI2 @ 40MHz，DMA 双缓冲（2 × 40 行）；RGB 颜色序，横屏 MADCTL（MV|MY），**必须 INVON**（`bsp_disp_set_invert` 开关语义已取反）
-- 输入：无触摸层——导航全部走板载 GPIO 按键，经 6 键语义层（上/下/左/右/确定/返回）驱动。确定键并联 **A、START、SELECT** 三键（任一个都是确认），返回键为 **B**；全部内部上拉、低电平有效。**KEY_MENU（GPIO18）、KEY_OPTION（GPIO8）、KEY_BOOT（GPIO0）本固件保留未映射**——GPIO0 有意不再兼任息屏按钮，避免输入职责混淆
+- 显示：T320B7-C12-16 3.2" IPS（ST7789，原生 240×320），SPI2 @ 40MHz，DMA 双缓冲（2 × 40 行）；RGB 颜色序，横屏 MADCTL（MV|MY），**必须 INVON**
+- 输入：无触摸层——导航全部走板载 GPIO 按键，经 6 键语义层（上/下/左/右/确定/返回）驱动。确定键并联 **A、START、SELECT** 三键（任一个都是确认），返回键为 **B**；全部内部上拉、低电平有效。**KEY_MENU（GPIO18）、KEY_OPTION（GPIO8）、KEY_BOOT（GPIO0）本固件保留未映射**
 - 背光：GPIO39，LEDC PWM 8bit/5kHz，高电平点亮
 - 板上的 SD 卡槽、I2S 喇叭、麦克风、电池电量 ADC、WS2812 状态灯**本固件均未使用**
 
@@ -510,7 +509,7 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 - **合宙 CORE ESP32-C3**——选 **USB 直连版（非 CH340）**；烧录和串口 CLI 都直接走 Type-C 口（USB-Serial-JTAG），Windows 8 以上免驱
 - **ESP32-C3 Super Mini**——排针只引出 GPIO0–10/20/21，本方案每根线都落在 GPIO0–10 内
 
-ESP32-C3 与其它目标芯片有三点差异，固件已全部处理：**单核**（LVGL 任务不绑核运行）、**无 PCNT 外设**（EC11 改用 2ms 定时轮询软件正交解码——不用 GPIO 中断，避免悬浮/噪声输入形成中断风暴）、合宙板 flash 为**两线 DIO 模式**（固件按 `FLASHMODE_DIO` 构建，Super Mini 同样兼容）。注意：C3 只有 400KB SRAM 且无 PSRAM 可选，堆空间比 ESP32 板紧张——Klipper/Moonraker 是主要使用场景。
+ESP32-C3 与其它目标芯片有三点差异，固件已全部处理：**单核**（LVGL 任务不绑核运行）、**无 PCNT 外设**（EC11 改用 2ms 定时轮询软件正交解码）、合宙板 flash 为**两线 DIO 模式**（固件按 `FLASHMODE_DIO` 构建，Super Mini 同样兼容）。注意：C3 只有 400KB SRAM 且无 PSRAM 可选，堆空间比 ESP32 板紧张——Klipper/Moonraker 是主要使用场景。
 
 - 主控：ESP32-C3（单核 RISC-V 160MHz，400KB SRAM），4MB flash @ 80MHz **DIO**
 - 显示：ST7789 走 esp_lcd 官方驱动（默认 INVOFF 即正常颜色）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）
