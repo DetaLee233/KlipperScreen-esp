@@ -57,18 +57,19 @@ void confirm_open(const char *text, const char *ok_text, confirm_cb_t callback, 
     lv_obj_add_event_cb(overlay, on_overlay_click, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *card = theme_card(overlay);
-    lv_obj_set_size(card, ui_px(264), ui_px(128));
+    int cw = LV_MIN(ui_px(264), ui_content_w());   /* 方屏（480x480）2x 换算 528px 超屏宽 */
+    lv_obj_set_size(card, cw, ui_px(128));
     lv_obj_center(card);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t *lbl = theme_label(card, text, THEME_FONT_M, THEME_COL_TEXT);
-    lv_obj_set_width(lbl, ui_px(232));
+    lv_obj_set_width(lbl, cw - ui_px(32));
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
 
     lv_obj_t *row = lv_obj_create(card);
     lv_obj_remove_style_all(row);
-    lv_obj_set_size(row, ui_px(232), ui_px(38));
+    lv_obj_set_size(row, cw - ui_px(32), ui_px(38));
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 

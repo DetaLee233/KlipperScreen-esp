@@ -13,6 +13,7 @@
 #if CONFIG_BOARD_ESP32S3_RETRO_GO
 
 #include "bsp.h"
+#include "bsp_lcd_color_io.h"
 #include "bsp_gpio_buttons.h"
 #include "bsp_screen_power.h"
 
@@ -319,6 +320,7 @@ void bsp_init(void)
     ESP_ERROR_CHECK(esp_lcd_panel_io_register_event_callbacks(
         io, &callbacks, NULL));
 
+    ESP_ERROR_CHECK(bsp_lcd_color_io_wrap(&io, false));
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = PIN_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,   /* 上游 MADCTL BGR=0 */

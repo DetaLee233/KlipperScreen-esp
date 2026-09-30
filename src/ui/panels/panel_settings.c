@@ -1,5 +1,5 @@
 /*
- * 设置：网络 / 打印机连接 / 语言 / 显示设置 + 版本
+ * 设置：网络 / 打印机连接 / 语言 / 显示设置 + 关于
  * 背光、自动息屏、主题、反色、旋转收进"显示设置"二级菜单（panel_display）。
  */
 #include "../theme.h"
@@ -32,6 +32,12 @@ static void open_language(lv_event_t *e)
     panel_mgr_open("language");
 }
 
+static void open_about(lv_event_t *e)
+{
+    LV_UNUSED(e);
+    panel_mgr_open("about");
+}
+
 static lv_obj_t *create(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL);
@@ -52,7 +58,7 @@ static lv_obj_t *create(void)
     theme_row_link(scr, "显示设置", "", y, open_display);
     y += step;
 
-    theme_row(scr, "版本", KR_VERSION, y);
+    theme_row_link(scr, "关于", KR_VERSION, y, open_about);
 
     /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
     ui_nav_group_set_list(lv_group_get_default(), true);

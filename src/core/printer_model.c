@@ -15,6 +15,10 @@
 #include "bambu_cloud.h"
 #include "bambu_monitor.h"
 #include "bsp_wifi.h"
+#include "file_list_stream.h"
+#ifdef ESP_PLATFORM
+#include "moonraker_files_esp32.h"
+#endif
 
 #include "cJSON.h"
 #include "lvgl.h"
@@ -38,11 +42,16 @@ static struct {
     int   online;              /* Moonraker READY */
     int   rtt_ms;              /* 应用层心跳往返延迟，0=未知 */
     char  gcode_err[96];       /* 待 UI 提示的 klippy 错误（"!!" 行，已去前缀） */
+    int   tool_count;          /* 工具数，>=1（单挤出机 = 1） */
+    int   current_tool;        /* 活动工具索引，0 起 */
+    float tool_temp[PRINTER_MAX_TOOLS];
+    float tool_target[PRINTER_MAX_TOOLS];
 } M = {
     .state = PRINTER_STATE_DISCONNECTED,
     .flow = 100, .speed = 100,
     .klippy = "disconnected",
     .print_state = "standby",
+    .tool_count = 1, .current_tool = 0,
 };
 
 static bool klipper_active(void)
@@ -109,9 +118,9 @@ printer_capabilities_t printer_capabilities(void)
     return klipper_active()
            ? PRINTER_CAP_KLIPPER_ALL : 0;
 }
-float printer_temp_ext(void)   { bambu_monitor_snapshot_t b; return klipper_active() ? M.ext : (bambu_status_snapshot(&b) ? b.printer.nozzle_temp : 0); }
+float printer_temp_ext(void)   { bambu_monitor_snapshot_t b; return klipper_active() ? M.tool_temp[printer_current_tool()] : (bambu_status_snapshot(&b) ? b.printer.nozzle_temp : 0); }
 float printer_temp_bed(void)   { bambu_monitor_snapshot_t b; return klipper_active() ? M.bed : (bambu_status_snapshot(&b) ? b.printer.bed_temp : 0); }
-float printer_target_ext(void) { bambu_monitor_snapshot_t b; return klipper_active() ? M.ext_t : (bambu_status_snapshot(&b) ? b.printer.nozzle_target : 0); }
+float printer_target_ext(void) { bambu_monitor_snapshot_t b; return klipper_active() ? M.tool_target[printer_current_tool()] : (bambu_status_snapshot(&b) ? b.printer.nozzle_target : 0); }
 float printer_target_bed(void) { bambu_monitor_snapshot_t b; return klipper_active() ? M.bed_t : (bambu_status_snapshot(&b) ? b.printer.bed_target : 0); }
 float printer_pos(int axis)    { return klipper_active() ? M.pos[axis] : 0; }
 int printer_homed(int axis)    { return klipper_active() ? M.homed[axis] : 0; }
@@ -127,6 +136,46 @@ const char *printer_filename(void)
     return bambu_name;
 }
 float printer_flow_pct(void)   { return klipper_active() ? M.flow : 0; }
+
+/* ---- 多工具 ---- */
+int printer_tool_count(void) { return M.tool_count >= 1 ? M.tool_count : 1; }
+
+int printer_current_tool(void)
+{
+    int t = M.current_tool;
+    if (t < 0 || t >= printer_tool_count()) return 0;
+    return t;
+}
+
+float printer_temp_tool(int tool)
+{
+    if (tool < 0 || tool >= printer_tool_count()) tool = 0;
+    return M.tool_temp[tool];
+}
+
+float printer_target_tool(int tool)
+{
+    if (tool < 0 || tool >= printer_tool_count()) tool = 0;
+    return M.tool_target[tool];
+}
+
+void printer_set_target_tool(int tool, float t)
+{
+    if (!klipper_active()) return;
+    if (tool < 0 || tool >= PRINTER_MAX_TOOLS) return;
+    char g[48];
+    snprintf(g, sizeof(g), "M104 T%d S%d", tool, (int)(t + 0.5f));
+    klipper_gcode_script(g);
+}
+
+void printer_select_tool(int tool)
+{
+    if (!klipper_active()) return;
+    if (tool < 0 || tool >= PRINTER_MAX_TOOLS) return;
+    char g[16];
+    snprintf(g, sizeof(g), "T%d", tool);
+    klipper_gcode_script(g);
+}
 
 /* 取走待提示的 klippy 错误（取后清空）。UI 节拍轮询后弹 toast。 */
 bool printer_take_error(char *out, size_t cap)
@@ -231,9 +280,16 @@ void printer_home(int axis)
 {
     if (!klipper_active()) return;
     char g[16];
-    if (axis < 0) snprintf(g, sizeof(g), "G28");
-    else          snprintf(g, sizeof(g), "G28 %c", "XYZ"[axis]);
+    if (axis < 0)       snprintf(g, sizeof(g), "G28");
+    else if (axis == 3) snprintf(g, sizeof(g), "G28 X Y");
+    else                snprintf(g, sizeof(g), "G28 %c", "XYZ"[axis]);
     klipper_gcode_script(g);
+}
+
+void printer_motors_off(void)
+{
+    if (!klipper_active()) return;
+    klipper_gcode_script("M84");
 }
 
 void printer_extrude(float mm)
@@ -251,52 +307,46 @@ void printer_print_cancel(void) { if (klipper_active()) klipper_print_cancel(); 
 void printer_emergency_stop(void)  { if (klipper_active()) klipper_emergency_stop(); }
 void printer_firmware_restart(void){ if (klipper_active()) klipper_firmware_restart(); }
 
-/* ---------- GCode 文件列表 ----------
- * server.files.list {"root":"gcodes"} → moonraker_rpc 应答在 LVGL 上下文
- * 回到这里解析，再转发给面板回调。同时只允许一个在途请求（单面板使用场景）。 */
+/* Bounded GCode pages: ESP32 uses an independent streaming HTTP worker.
+ * Desktop transports retain RPC but parse its result one record at a time.
+ * One active request; page lifetime is limited to the callback, stale replies
+ * are rejected by generation, and timeout is polled without status traffic. */
+#define FILES_REQ_TIMEOUT_MS 25000
 static struct {
     printer_files_cb cb;
     void *ud;
     bool in_flight;
+    uint32_t start_ms;
+    uintptr_t generation;
+    unsigned offset;
 } files_req;
 
+/* 在途请求失败收尾：清标记并回调失败（count=-1）。LVGL 上下文调用。 */
+static void files_req_fail(void)
+{
+    printer_files_cb cb = files_req.cb;
+    void *ud = files_req.ud;
+    printer_files_cancel();
+    if (cb) cb(NULL, ud);
+}
+
+#ifndef ESP_PLATFORM
 static void on_files_list(char *json, void *ud)
 {
-    (void)ud;
+    if (!files_req.in_flight || (uintptr_t)ud != files_req.generation) { free(json); return; }
     printer_files_cb cb = files_req.cb;
     void *cb_ud = files_req.ud;
     files_req.in_flight = false;
 
-    printer_file_t *files = NULL;
-    int count = 0;
-
-    cJSON *arr = json ? cJSON_Parse(json) : NULL;
+    file_list_stream_t stream;
+    file_list_stream_init(&stream, files_req.offset);
+    bool ok = json && file_list_stream_feed(&stream, json, strlen(json)) && file_list_stream_finish(&stream);
     free(json);
-    if (!arr) count = -1;   /* RPC 错误/解析失败：区别于"空列表" */
-    if (arr) {
-        int n = cJSON_GetArraySize(arr);
-        files = n > 0 ? calloc(n, sizeof(printer_file_t)) : NULL;
-        cJSON *it;
-        cJSON_ArrayForEach(it, arr) {
-            if (!files) break;
-            cJSON *path = cJSON_GetObjectItem(it, "path");
-            cJSON *size = cJSON_GetObjectItem(it, "size");
-            if (!cJSON_IsString(path) || !cJSON_IsNumber(size)) continue;   /* 目录无 size，跳过 */
-            if (path->valuestring[0] == '.') continue;                      /* 隐藏文件 */
-            printer_file_t *f = &files[count++];
-            strncpy(f->name, path->valuestring, sizeof(f->name) - 1);
-            f->size = (uint32_t)size->valuedouble;
-            cJSON *mod = cJSON_GetObjectItem(it, "modified");
-            f->modified = cJSON_IsNumber(mod) ? mod->valuedouble : 0;
-        }
-        cJSON_Delete(arr);
-    }
-
-    if (cb) cb(files, count, cb_ud);
-    else    free(files);
+    if (cb) cb(ok ? &stream.page : NULL, cb_ud);
 }
+#endif
 
-bool printer_files_refresh(printer_files_cb cb, void *ud)
+bool printer_files_refresh(unsigned offset, printer_files_cb cb, void *ud)
 {
     if (!klipper_active() || !cb || files_req.in_flight ||
         M.state == PRINTER_STATE_DISCONNECTED)
@@ -304,11 +354,46 @@ bool printer_files_refresh(printer_files_cb cb, void *ud)
     files_req.cb = cb;
     files_req.ud = ud;
     files_req.in_flight = true;
-    if (!moonraker_rpc("server.files.list", "{\"root\":\"gcodes\"}", on_files_list, NULL)) {
+    files_req.start_ms = lv_tick_get();
+    files_req.offset = offset;
+    files_req.generation++;
+#ifdef ESP_PLATFORM
+    bool started = moonraker_files_start(offset);
+#else
+    bool started = moonraker_rpc("server.files.list", "{\"root\":\"gcodes\"}", on_files_list,
+                                 (void *)files_req.generation);
+#endif
+    if (!started) {
         files_req.in_flight = false;
         return false;
     }
     return true;
+}
+
+void printer_files_cancel(void)
+{
+    files_req.in_flight = false;
+    files_req.cb = NULL;
+    files_req.generation++;
+#ifdef ESP_PLATFORM
+    moonraker_files_cancel();
+#endif
+}
+
+void printer_files_poll(void)
+{
+    if (!files_req.in_flight) return;
+#ifdef ESP_PLATFORM
+    printer_file_page_t page;
+    if (moonraker_files_poll(&page)) {
+        printer_files_cb cb = files_req.cb;
+        void *ud = files_req.ud;
+        files_req.in_flight = false;
+        if (cb) cb(page.count < 0 ? NULL : &page, ud);
+        return;
+    }
+#endif
+    if (lv_tick_elaps(files_req.start_ms) > FILES_REQ_TIMEOUT_MS) files_req_fail();
 }
 
 void printer_file_delete(const char *name)
@@ -346,13 +431,25 @@ static void evaluate_state(void)
 void printer_model_set_online(int online)
 {
     M.online = online;
-    if (!online) M.rtt_ms = 0;   /* 断线后延迟值失效 */
+    if (!online) {
+        M.rtt_ms = 0;   /* 断线后延迟值失效 */
+        /* 断线时底层 clear_pending 直接丢在途请求且无回调，这里补失败收尾 */
+        if (files_req.in_flight) files_req_fail();
+    }
     evaluate_state();
 }
 
 void printer_model_set_rtt(int ms)
 {
     M.rtt_ms = ms;   /* 仅存储，UI 节拍自会刷新 */
+}
+
+void printer_model_set_tool_count(int n)
+{
+    if (n < 1) n = 1;
+    if (n > PRINTER_MAX_TOOLS) n = PRINTER_MAX_TOOLS;
+    M.tool_count = n;
+    if (M.current_tool >= n) M.current_tool = 0;
 }
 
 int printer_rtt_ms(void) { return klipper_active() ? M.rtt_ms : 0; }
@@ -375,6 +472,11 @@ static void jstr(cJSON *obj, const char *key, char *out, size_t len)
 
 void printer_model_apply_status_json(char *json_heap)
 {
+    /* 文件列表在途请求的超时兜底：应答被底层整条丢弃时（大列表 OOM 等）
+     * 主动判失败，防面板卡死在"加载中"。状态推送在线时约 4Hz，顺带巡检。 */
+    if (files_req.in_flight && lv_tick_elaps(files_req.start_ms) > FILES_REQ_TIMEOUT_MS)
+        files_req_fail();
+
     cJSON *status = cJSON_Parse(json_heap);
     free(json_heap);
     if (!status) return;
@@ -383,6 +485,16 @@ void printer_model_apply_status_json(char *json_heap)
     if ((it = cJSON_GetObjectItem(status, "extruder"))) {
         M.ext   = jnum(it, "temperature", M.ext);
         M.ext_t = jnum(it, "target", M.ext_t);
+        M.tool_temp[0]   = M.ext;
+        M.tool_target[0] = M.ext_t;
+    }
+    for (int i = 1; i < PRINTER_MAX_TOOLS; i++) {
+        char key[16];
+        snprintf(key, sizeof(key), "extruder%d", i);
+        if ((it = cJSON_GetObjectItem(status, key))) {
+            M.tool_temp[i]   = jnum(it, "temperature", M.tool_temp[i]);
+            M.tool_target[i] = jnum(it, "target", M.tool_target[i]);
+        }
     }
     if ((it = cJSON_GetObjectItem(status, "heater_bed"))) {
         M.bed   = jnum(it, "temperature", M.bed);
@@ -402,6 +514,12 @@ void printer_model_apply_status_json(char *json_heap)
             M.homed[0] = strchr(s, 'x') != NULL;
             M.homed[1] = strchr(s, 'y') != NULL;
             M.homed[2] = strchr(s, 'z') != NULL;
+        }
+        cJSON *ex = cJSON_GetObjectItem(it, "extruder");
+        if (cJSON_IsString(ex) && ex->valuestring &&
+            strncmp(ex->valuestring, "extruder", 8) == 0) {
+            int idx = atoi(ex->valuestring + 8);   /* "extruder"=0, "extruder3"=3 */
+            if (idx >= 0 && idx < PRINTER_MAX_TOOLS) M.current_tool = idx;
         }
     }
     if ((it = cJSON_GetObjectItem(status, "print_stats"))) {

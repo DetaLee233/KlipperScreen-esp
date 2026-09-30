@@ -36,6 +36,12 @@ void moonraker_reload(void);
 
 moonraker_state_t moonraker_state(void);
 
+/* 诊断（仅 ESP32 端口实现，串口 CLI status 用）：
+ * 距最后一次状态合入的秒数，<0 = 从未合入 */
+int moonraker_status_age_s(void);
+/* 状态投递去重闸当前是否置位 */
+bool moonraker_status_gate_pending(void);
+
 /* 发一条 JSON-RPC（fire-and-forget，无回调）。返回是否已发出。
  * params_json 为 JSON 片段（对象/数组文本），可为 NULL（无 params）。 */
 bool moonraker_send_rpc(const char *method, const char *params_json);

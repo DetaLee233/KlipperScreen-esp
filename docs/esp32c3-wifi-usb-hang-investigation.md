@@ -145,8 +145,10 @@ GPIO 中断方案虽然不丢边沿，但机械抖动、悬浮或接线噪声可
   `esp_timer`、LVGL 仍在同一 CPU 上调度。
 - 面板命令和像素 flush 共用 SPI 设备时，“命令调用很短”不等于可以无锁并发。
 - C3 无 PSRAM，当前 LVGL 双 partial buffer 为 `2 × 320 × 40 × 2 = 51.2 KB`。
-- 当前固件 app 分区只剩约 1%；这不是本次运行时死锁的原因，但新增功能前
-  应先调整分区或裁减固件。
+- Bambu Cloud Monitor 接入后，旧的 `-Og` canonical 配置会超出 app 分区约
+  18 KiB。不能直接移动 LittleFS 扩大 app（升级会让已有配置失效），因此 C3
+  单独改用 `-Os`；v0.5.9 全量构建的 app 为 `0x2fced0`，在 `0x320000`
+  分区中还剩 `0x23130`（约 140 KiB / 4%）。后续新增大模块仍须先核对体积。
 - `sdkconfig.defaults.<board>` 不会覆盖已生成的 canonical `sdkconfig.<board>`；
   修改 Kconfig 时必须同步检查两者。
 

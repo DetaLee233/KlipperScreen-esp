@@ -39,6 +39,17 @@ static void on_menu(lv_event_t *e)
     panel_mgr_open((const char *)lv_event_get_user_data(e));
 }
 
+/* 480 宽的 2x 档（SenseCAP 480x480）：拉丁语系长词在 28px CJK 字库里溢出按钮，
+   缩一档改用 ui_font_latin24()（Lato 24，含重音字形；800 宽的 JC8048 放得下，不动） */
+static void fit_latin_label(lv_obj_t *btn)
+{
+    if (ui_scale() < 2.0f || ui_scr_w() > 480) return;
+    ui_lang_t l = ui_lang_get();
+    if (l == UI_LANG_ZH || l == UI_LANG_ZH_TW) return;
+    lv_obj_t *lbl = lv_obj_get_child(btn, -1);
+    if (lbl) lv_obj_set_style_text_font(lbl, ui_font_latin24(), 0);
+}
+
 static void on_status_click(lv_event_t *e)
 {
     LV_UNUSED(e);
@@ -246,6 +257,8 @@ static lv_obj_t *create(void)
         lv_obj_set_size(menu_btns[i], bw, bh);
         lv_obj_add_event_cb(menu_btns[i], on_menu, LV_EVENT_CLICKED, (void *)items[i].panel);
     }
+    fit_latin_label(menu_btns[0]);   /* “温度”：拉丁译文最长（Temperature/Température） */
+    fit_latin_label(menu_btns[5]);   /* “设置”：意语 Impostazioni 同样溢出 */
 
     /* 底部：急停（高优先级，红色实心）+ 重启下位机 */
     int bw2 = (ui_content_w() - gap) / 2;
@@ -260,6 +273,7 @@ static lv_obj_t *create(void)
     lv_obj_set_size(btn_restart, bw2, ui_px(28));
     lv_obj_align(btn_restart, LV_ALIGN_BOTTOM_RIGHT, -ui_px(8), -ui_px(4));
     lv_obj_add_event_cb(btn_restart, on_restart, LV_EVENT_CLICKED, NULL);
+    fit_latin_label(btn_restart);
 
     /* 网格布局：四方向键走几何就近聚焦（create 期间默认组即本面板导航组） */
     ui_nav_group_set_spatial(lv_group_get_default(), true);

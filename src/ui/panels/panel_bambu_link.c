@@ -75,7 +75,7 @@ static lv_obj_t *create(void)
         lv_obj_align(icons[i], LV_ALIGN_TOP_MID, 0, ui_px(12));
         names[i] = theme_label(cards[i], name_texts[i], THEME_FONT_S, THEME_COL_TEXT);
         lv_obj_set_size(names[i], card_w - ui_px(12), ui_px(18));
-        lv_label_set_long_mode(names[i], LV_LABEL_LONG_DOT);
+        lv_label_set_long_mode(names[i], LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_set_style_text_align(names[i], LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_align(names[i], LV_ALIGN_TOP_MID, 0, ui_px(40));
         details[i] = theme_label(cards[i], detail_texts[i], THEME_FONT_S, THEME_COL_TEXT_DIM);

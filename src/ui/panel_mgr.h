@@ -20,9 +20,11 @@ typedef struct {
     void (*on_show)(void);            /* 每次显示时调用（全量刷新数据） */
     void (*on_tick)(void);            /* 数据节拍（仅栈顶面板收到） */
     int hide_temps;                   /* 标题栏不显示右侧温度（标题长的面板置 1） */
+    int show_motor_off;               /* 标题栏右上角显示关闭电机按钮（移动面板置 1） */
 } panel_def_t;
 
 void panel_mgr_init(void);
+void panel_mgr_reload(void);             /* 销毁全部面板并重建（桌面端切语言用，须异步调用） */
 void panel_mgr_open(const char *name);   /* 入栈 + 左滑转场 */
 void panel_mgr_back(void);               /* 出栈 + 右滑转场 */
 void panel_mgr_home(void);               /* 直接回主面板（清空导航栈） */

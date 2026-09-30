@@ -16,6 +16,7 @@
 #if CONFIG_BOARD_E32R35T
 
 #include "bsp.h"
+#include "bsp_lcd_color_io.h"
 #include "bsp_screen_power.h"
 #include "bsp_sleep_button.h"
 
@@ -503,6 +504,7 @@ void bsp_init(void)
     esp_lcd_panel_io_callbacks_t io_cbs = { .on_color_trans_done = on_color_trans_done };
     ESP_ERROR_CHECK(esp_lcd_panel_io_register_event_callbacks(io_handle, &io_cbs, NULL));
 
+    ESP_ERROR_CHECK(bsp_lcd_color_io_wrap(&io_handle, true));
     esp_lcd_panel_dev_config_t panel_cfg = {
         .reset_gpio_num = PIN_LCD_RST,   /* -1：与 EN 共用，reset() 走软件复位 */
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,   /* 面板 BGR 原生（对照 TFT_eSPI ST7796 驱动） */

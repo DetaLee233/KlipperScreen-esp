@@ -66,7 +66,9 @@ static lv_obj_t *create(void)
     int ybot = ui_scr_h() - ui_px(6) - ui_px(30) - gap;              /* 归位行上方 */
     int pitch = (ybot - y0) / 3;
     int row_h = pitch - gap;
-    int side_w = ui_px(76);
+    /* 方屏（480x480）：2x 换算的侧键 152px 会挤占轴位置显示区，
+       限到内容宽 1/4（CYD 76/76、JC8048 152/152 不变） */
+    int side_w = LV_MIN(ui_px(76), ui_content_w() / 4);
     int card_w = ui_content_w() - 2 * side_w - 2 * gap;
     for (int a = 0; a < 3; a++) {
         int y = y0 + a * pitch;
@@ -89,7 +91,7 @@ static lv_obj_t *create(void)
 
     /* 归位行：三枚按钮三分内容宽 */
     static const struct { const char *icon, *t; int axis; } homes[] = {
-        {LV_SYMBOL_HOME, "XY", 0}, {LV_SYMBOL_HOME, "Z", 2}, {LV_SYMBOL_HOME, "全部", -1},
+        {LV_SYMBOL_HOME, "XY", 3}, {LV_SYMBOL_HOME, "Z", 2}, {LV_SYMBOL_HOME, "全部", -1},
     };
     int hw = (ui_content_w() - 2 * gap) / 3;
     for (int i = 0; i < 3; i++) {
@@ -98,14 +100,15 @@ static lv_obj_t *create(void)
         lv_obj_align(b, LV_ALIGN_BOTTOM_LEFT, ui_px(8) + i * (hw + gap), -ui_px(6));
         lv_obj_add_event_cb(b, on_home, LV_EVENT_CLICKED, (void *)(intptr_t)homes[i].axis);
     }
-    /* 注：mock 的 Home XY 简化为归 X（演示用） */
 
     return scr;
 }
 
 panel_def_t panel_move_def = {
-    .name = "move", .title = "移动",
+    .name = "move", .title = "",   /* 无标题：界面语义自明，且标题会与标题栏温度数值压叠 */
     .create = create,
     .on_show = update_pos,
     .on_tick = update_pos,
+    .hide_temps = 1,               /* 标题栏温度让位给右上角关闭电机按钮 */
+    .show_motor_off = 1,
 };

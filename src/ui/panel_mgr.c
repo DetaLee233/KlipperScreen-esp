@@ -4,6 +4,7 @@
 #include "theme.h"
 #include "ui_nav.h"
 #include "printer.h"
+#include "bsp_caps.h"
 #include <string.h>
 
 /* ---------- 面板注册表（panels 目录下实现，集中声明） ---------- */
@@ -16,7 +17,9 @@ extern panel_def_t panel_files_def;
 extern panel_def_t panel_file_detail_def;
 extern panel_def_t panel_settings_def;
 extern panel_def_t panel_language_def;
+extern panel_def_t panel_about_def;
 extern panel_def_t panel_display_def;
+extern panel_def_t panel_display_color_def;
 extern panel_def_t panel_wifi_def;
 extern panel_def_t panel_moonraker_def;
 extern panel_def_t panel_machine_mode_def;
@@ -24,6 +27,9 @@ extern panel_def_t panel_bambu_link_def;
 extern panel_def_t panel_bambu_setup_def;
 extern panel_def_t panel_printers_def;
 extern panel_def_t panel_brightness_def;
+#if BSP_HAS_LINUX_HOST
+extern panel_def_t panel_update_def;
+#endif
 
 static panel_def_t *registry[] = {
     &panel_main_def,
@@ -35,7 +41,9 @@ static panel_def_t *registry[] = {
     &panel_file_detail_def,
     &panel_settings_def,
     &panel_language_def,
+    &panel_about_def,
     &panel_display_def,
+    &panel_display_color_def,
     &panel_wifi_def,
     &panel_moonraker_def,
     &panel_machine_mode_def,
@@ -43,6 +51,9 @@ static panel_def_t *registry[] = {
     &panel_bambu_setup_def,
     &panel_printers_def,
     &panel_brightness_def,
+#if BSP_HAS_LINUX_HOST
+    &panel_update_def,
+#endif
 };
 
 #define REG_COUNT (sizeof(registry) / sizeof(registry[0]))
@@ -89,6 +100,11 @@ static void show(panel_def_t *p, int push, panel_def_t *leaving)
     titlebar_set(title, nav_top > 0);
     /* 小屏（scale<1）标题位窄，子面板的温度让位给标题，只在主面板（时钟位）显示 */
     titlebar_show_temps(!p->hide_temps && (ui_scale() >= 1.0f || nav_top == 0));
+    /* 关闭电机按钮：仅声明面板 + 后端支持移动（Klipper）时显示 */
+    int want_motoroff = p->show_motor_off && printer_has_capability(PRINTER_CAP_MOVE);
+    titlebar_show_motoroff(want_motoroff);
+    lv_group_remove_obj(titlebar_motoroff_button());
+    if (want_motoroff) lv_group_add_obj(p->nav_group, titlebar_motoroff_button());
     ui_nav_activate(p->nav_group);
     ui_nav_set_global_obj(titlebar_back_button(), nav_top > 0);
     if (p->on_show) p->on_show();
@@ -106,6 +122,25 @@ void panel_mgr_init(void)
     ui_nav_set_global_obj(titlebar_back_button(), false);
     if (nav_stack[0]->on_show) nav_stack[0]->on_show();
     ui_nav_refocus_visible(nav_stack[0]->nav_group);
+}
+
+/* 桌面端切语言免重启用：销毁全部已建面板树后回到主面板重建。
+   必须先切到临时空屏再删旧树——不能删正在显示的屏幕；
+   不能在面板事件回调里同步调用（用 lv_async_call 推迟到回调返回后）。 */
+void panel_mgr_reload(void)
+{
+    lv_obj_t *tmp = lv_obj_create(NULL);
+    lv_screen_load(tmp);
+    for (unsigned i = 0; i < REG_COUNT; i++) {
+        panel_def_t *p = registry[i];
+        if (!p->scr) continue;
+        ui_nav_group_destroy(p->scr, p->nav_group);
+        lv_obj_delete(p->scr);
+        p->scr = NULL;
+        p->nav_group = NULL;
+    }
+    panel_mgr_init();               /* 重置 nav 栈、重建主面板并加载 */
+    lv_obj_delete(tmp);             /* 已不是活动屏，可删 */
 }
 
 void panel_mgr_open(const char *name)

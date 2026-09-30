@@ -118,6 +118,28 @@ static void rotary_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_RELEASED;
 }
 
+int bsp_rotary_encoder_get_counts(lv_indev_t *indev)
+{
+    rotary_ctx_t *ctx = indev ? lv_indev_get_user_data(indev) : NULL;
+    return ctx ? ctx->counts_per_detent : 0;
+}
+
+bool bsp_rotary_encoder_set_counts(lv_indev_t *indev, int counts)
+{
+    rotary_ctx_t *ctx = indev ? lv_indev_get_user_data(indev) : NULL;
+    if (!ctx || counts < 1 || counts > 8) return false;
+    int count;
+#if SOC_PCNT_SUPPORTED
+    if (pcnt_unit_get_count(ctx->unit, &count) != ESP_OK) return false;
+#else
+    count = ctx->sw_count;
+#endif
+    ctx->last_count = count;
+    ctx->remainder = 0;
+    ctx->counts_per_detent = counts;
+    return true;
+}
+
 static void cleanup(rotary_ctx_t *ctx, bool enabled, bool started)
 {
     if (!ctx) return;

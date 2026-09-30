@@ -1,5 +1,5 @@
 site_name: KlipperScreen-esp 文档 / Docs
-site_description: 跨平台 3D 打印机显示与控制软件（ESP32 / Windows / macOS，Klipper / Moonraker + 拓竹云端监视）— board porting & contribution guides
+site_description: 跨平台 3D 打印机显示与控制软件（ESP32 / Windows / Linux / macOS，Klipper / Moonraker + 拓竹云端监视）— board porting & contribution guides
 site_url: https://umeiko.github.io/KlipperScreen-esp/
 repo_url: https://github.com/umeiko/KlipperScreen-esp
 edit_uri: edit/main/docs/
@@ -42,11 +42,12 @@ plugins:
             Home: 首页
             Screenshots: 界面展示
             Supported boards: 支持的板子
+            Display and encoder settings: 显示与编码器设置
             Porting to your own board: 移植到自己的开发板
-            Contributing a new board: 贡献新板型（PR 指南）
             Developer notes: 开发笔记
             Architecture: 架构说明
             Building from source: 从源码构建
+            File-list issue 8 retest: 文件列表 issue 8 复测
             JC8048W550 RGB display guide: JC8048W550 RGB 屏排障指南
             Klipper / Moonraker API notes: Klipper / Moonraker API 笔记
             LVGL v9 API notes: LVGL v9 API 笔记
@@ -56,10 +57,11 @@ nav:
   - Screenshots: screenshots.md
   - Supported boards: boards.md
   - Porting to your own board: porting.md
-  - Contributing a new board: contributing-board.md
   - Developer notes:
       - Architecture: architecture.md
       - Building from source: building.md
+      - Display and encoder settings: display-settings.md
+      - File-list issue 8 retest: issue-8-file-list.md
       - JC8048W550 RGB display guide: jc8048w550-rgb-display-guide.md
       - Klipper / Moonraker API notes: klipper-moonraker-api.md
       - LVGL v9 API notes: lvgl-v9-api-notes.md

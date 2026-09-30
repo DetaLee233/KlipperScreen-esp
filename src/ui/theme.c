@@ -197,10 +197,20 @@ lv_obj_t *theme_row(lv_obj_t *parent, const char *key, const char *val, int y)
     lv_obj_set_size(row, ui_content_w(), ui_px(38));
     lv_obj_align(row, LV_ALIGN_TOP_MID, 0, y);
 
+    /* Widths are based on the card's inner box, not its outer width.  This is
+     * what keeps long translations and values in disjoint scrolling lanes. */
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    int val_w = inner_w * 40 / 100;
+    int key_w = inner_w - ui_px(2) - ui_px(4) - ui_px(6) - val_w;
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    lv_obj_set_width(k, key_w);
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, ui_px(2), 0);
 
     lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
+    lv_obj_set_width(v, val_w);
+    lv_label_set_long_mode(v, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_style_text_align(v, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_align(v, LV_ALIGN_RIGHT_MID, -ui_px(4), 0);
     return row;
 }
@@ -212,16 +222,40 @@ lv_obj_t *theme_row_link(lv_obj_t *scr, const char *key, const char *val, int y,
     lv_obj_align(row, LV_ALIGN_TOP_MID, 0, y);
     lv_obj_add_event_cb(row, cb, LV_EVENT_CLICKED, NULL);
 
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    int has_val = val && val[0];
+    int val_w = has_val ? inner_w * 35 / 100 : 0;
+    /* 没有右侧值的菜单项把整行空间留给标题；此前仍预留 35% 的值区，
+       会让“打印机连接设置”等本来放得下的标题无意义地循环滚动。 */
+    int key_w = inner_w - ui_px(2) - ui_px(22) -
+                (has_val ? ui_px(6) + val_w : 0);
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    lv_obj_set_width(k, key_w);
+    lv_label_set_long_mode(k, has_val ? LV_LABEL_LONG_SCROLL_CIRCULAR : LV_LABEL_LONG_CLIP);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, ui_px(2), 0);
 
     lv_obj_t *arrow = theme_label(row, LV_SYMBOL_RIGHT, THEME_FONT_ICON, THEME_COL_ACCENT);
     lv_obj_align(arrow, LV_ALIGN_RIGHT_MID, -ui_px(4), 0);
 
-    /* 值标签在箭头左侧 */
-    lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
-    lv_obj_align_to(v, arrow, LV_ALIGN_OUT_LEFT_MID, -ui_px(4), 0);
+    if (has_val) {
+        /* 值标签在箭头左侧 */
+        lv_obj_t *v = theme_label(row, val, THEME_FONT_S, THEME_COL_TEXT_DIM);
+        lv_obj_set_width(v, val_w);
+        lv_label_set_long_mode(v, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_obj_set_style_text_align(v, LV_TEXT_ALIGN_RIGHT, 0);
+        lv_obj_align_to(v, arrow, LV_ALIGN_OUT_LEFT_MID, -ui_px(4), 0);
+    }
     return row;
+}
+
+/* 下拉列表打开时挪到顶层：标题栏挂在 lv_layer_top()，列表默认 re-parent 到
+   screen 会被标题栏盖住（向上展开时第一项点不到）。READY 在 open() 把列表
+   挂到 screen 之后发送，这里再挪一次即压在标题栏之上；dropdown 析构会
+   无条件删除 list，换 parent 无泄漏。 */
+static void dd_list_top_cb(lv_event_t *e)
+{
+    lv_obj_t *list = lv_dropdown_get_list(lv_event_get_target(e));
+    if (list) lv_obj_set_parent(list, lv_layer_top());
 }
 
 /* 带下拉的设置行（语言/自动息屏/主题共用样式）；icon 非 NULL 时在文字前加小图标 */
@@ -240,6 +274,10 @@ lv_obj_t *theme_row_dropdown(lv_obj_t *scr, const char *key, const char *options
         text_x = ui_px(22);
     }
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    /* 长语言 key 限宽滚动，给右侧下拉留位 */
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    lv_obj_set_width(k, inner_w - text_x - ui_px(108));
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, text_x, 0);
 
     lv_obj_t *dd = lv_dropdown_create(row);
@@ -263,6 +301,7 @@ lv_obj_t *theme_row_dropdown(lv_obj_t *scr, const char *key, const char *options
     lv_obj_set_style_bg_opa(list, LV_OPA_COVER, LV_PART_SELECTED);
     lv_dropdown_set_selected(dd, sel);
     lv_obj_add_event_cb(dd, cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(dd, dd_list_top_cb, LV_EVENT_READY, NULL);
     theme_focusable(dd);
     return row;
 }
@@ -276,6 +315,10 @@ lv_obj_t *theme_row_switch(lv_obj_t *scr, const char *key, int y, int on, lv_eve
     lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *k = theme_label(row, key, THEME_FONT_M, THEME_COL_TEXT);
+    /* 长语言 key 限宽滚动，给右侧开关留位 */
+    int inner_w = ui_content_w() - 2 * THEME_PAD;
+    lv_obj_set_width(k, inner_w - ui_px(54));
+    lv_label_set_long_mode(k, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_align(k, LV_ALIGN_LEFT_MID, ui_px(2), 0);
 
     lv_obj_t *sw = lv_switch_create(row);

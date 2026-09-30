@@ -67,12 +67,36 @@ const ICONS = [
   ['toolchanger',    16, 'swap_16'],      // Moonraker-切换打印机行：双向箭头
   ['toolchanger',     7, 'swap_16_sm'],
   ['toolchanger',    32, 'swap_32'],      // 大屏 2x 变体
+  ['motor_off',      18, 'motor_off',    'RGB565A8'],    // 移动面板标题栏：关闭电机
+  ['motor_off',       8, 'motor_off_sm', 'RGB565A8'],
+  ['motor_off',      36, 'motor_off_36', 'RGB565A8'], // 大屏 2x 变体
+  ['motor_off',      72, 'motor_off_72', 'RGB565A8'], // 桌面 720p+ huge 档变体
   ['klipper_logo',   56, 'klipper_logo_56',  'RGB565A8'], // 官方红灰双色
   ['klipper_logo',   25, 'klipper_logo_56_sm', 'RGB565A8'],
   ['klipper_logo',  112, 'klipper_logo_112', 'RGB565A8'], // 大屏 2x 变体
   ['bambu_logo',     56, 'bambu_logo_56'],    // 机器模式；槽位页缩至约 32px
   ['bambu_logo',     25, 'bambu_logo_56_sm'],
   ['bambu_logo',    112, 'bambu_logo_112'],   // 大屏 2x 变体
+  // 桌面端 720p+（ui_scale()>=3）大字档变体：big 档的 2x，ui_icon() huge 档自动映射
+  ['heater',        112, 'heater_112'],
+  ['move',          112, 'move_112'],
+  ['extrude',       112, 'extrude_112'],
+  ['files',         112, 'files_112'],
+  ['printer',       112, 'printer_112'],
+  ['settings',      112, 'settings_112'],
+  ['extruder',       64, 'nozzle_64'],
+  ['bed',            64, 'bed_64'],
+  ['link',           64, 'link_64'],
+  ['link_off',       64, 'link_off_64'],
+  ['alert_circle',   64, 'alert_circle_64'],
+  ['web',            64, 'globe_64'],
+  ['toolchanger',    64, 'swap_64'],
+  ['wifi_excellent', 48, 'wifi_4_48'],
+  ['wifi_good',      48, 'wifi_3_48'],
+  ['wifi_fair',      48, 'wifi_2_48'],
+  ['wifi_weak',      48, 'wifi_1_48'],
+  ['klipper_logo',  224, 'klipper_logo_224', 'RGB565A8'],
+  ['bambu_logo',    224, 'bambu_logo_224',   'RGB565A8'],
 ];
 
 mkdirSync(OUT_PNG, { recursive: true });

@@ -1,4 +1,5 @@
 #include "bambu_http_esp32.h"
+#include "bsp.h"
 
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"
@@ -83,9 +84,12 @@ bool bambu_http_cookie_value(const char *jar, const char *name,
 
 static esp_err_t on_http_event(esp_http_client_event_t *evt)
 {
-    if (evt->event_id == HTTP_EVENT_ON_HEADER && evt->user_data &&
-        evt->header_key && evt->header_value &&
-        strcasecmp(evt->header_key, "Set-Cookie") == 0) {
+    if (evt->event_id != HTTP_EVENT_ON_HEADER || !evt->header_key ||
+        !evt->header_value)
+        return ESP_OK;
+    if (strcasecmp(evt->header_key, "Date") == 0)
+        bsp_time_sync_from_http_date(evt->header_value);
+    if (evt->user_data && strcasecmp(evt->header_key, "Set-Cookie") == 0) {
         header_ctx_t *ctx = evt->user_data;
         if (ctx->jar && ctx->jar_cap)
             bambu_http_cookie_put(ctx->jar, ctx->jar_cap, evt->header_value);

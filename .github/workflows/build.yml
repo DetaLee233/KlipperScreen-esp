@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 15 个板型按芯片合并为 3 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
+  # 16 个板型按芯片合并为 3 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
   # 共享按 shard 分开的 ccache。单板构建失败不中断其余板型：收集失败列表，
   # 上传可用的部分产物与失败日志后，在末尾令 shard 失败。
   firmware:
@@ -68,6 +68,7 @@ jobs:
           esp32s3-ILI9488-480_320-xpt2046-ec11|build-esp32s3-ili9488-ec11|sdkconfig.esp32s3-ILI9488-480_320-xpt2046-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32s3-ILI9488-480_320-xpt2046-ec11|esp32s3|16MB|0x0
           esp32s3-ILI9341-320_240-xpt2046-ec11|build-esp32s3-ili9341-ec11|sdkconfig.esp32s3-ILI9341-320_240-xpt2046-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32s3-ILI9341-320_240-xpt2046-ec11|esp32s3|16MB|0x0
           jc8048w550|build-jc8048w550|sdkconfig.jc8048w550|sdkconfig.defaults;sdkconfig.defaults.jc8048w550|esp32s3|16MB|0x0
+          esp32s3-sensecap-indicator|build-sensecap-indicator|sdkconfig.esp32s3-sensecap-indicator|sdkconfig.defaults;sdkconfig.defaults.esp32s3-sensecap-indicator|esp32s3|8MB|0x0
           esp32s3-JLC-SZP|build-esp32s3-jlc-szp|sdkconfig.esp32s3-JLC-SZP|sdkconfig.defaults;sdkconfig.defaults.esp32s3-JLC-SZP|esp32s3|16MB|0x0
           esp32s3-retro-go|build-esp32s3-retro-go|sdkconfig.esp32s3-retro-go|sdkconfig.defaults;sdkconfig.defaults.esp32s3-retro-go|esp32s3|16MB|0x0
           EOF
@@ -98,8 +99,19 @@ jobs:
             cp "$bdir/bootloader/bootloader.bin" \
                "$bdir/partition_table/partition-table.bin" \
                "$bdir/klipper_remote_display.bin" "$dest/" || return 1
-            # 板型参数随产物走：刷机脚本读 flash.cfg 决定 chip/flash 大小/bootloader 偏移
-            printf 'CHIP=%s\nFLASH_SIZE=%s\nBL_OFFSET=%s\n' "$chip" "$flash_size" "$bl_offset" > "$dest/flash.cfg"
+            if [[ "$GITHUB_REF_NAME" == *wip* ]]; then
+              mkdir -p "$GITHUB_WORKSPACE/symbols"
+              cp "$bdir/klipper_remote_display.elf" "$GITHUB_WORKSPACE/symbols/$board.elf" || return 1
+            fi
+            # 板型参数随产物走：刷机脚本读 flash.cfg 决定 chip/flash 大小/bootloader 偏移；
+            # TOUCH_CAL=1 标记电阻触摸屏板型（XPT2046），刷机脚本据此提供校准引导
+            touch_cal=0
+            case "$board" in
+              cyd_2432s028r|cyd_2432s028r_plus|e32r35t|\
+              esp32s3-st7796-480_320-xpt2046-ec11|esp32s3-ILI9488-480_320-xpt2046-ec11|\
+              esp32s3-ILI9341-320_240-xpt2046-ec11) touch_cal=1 ;;
+            esac
+            printf 'CHIP=%s\nFLASH_SIZE=%s\nBL_OFFSET=%s\nTOUCH_CAL=%s\n' "$chip" "$flash_size" "$bl_offset" "$touch_cal" > "$dest/flash.cfg"
             rm -f "$log"   # 成功板的构建日志不留档
           }
 
@@ -125,6 +137,15 @@ jobs:
         with:
           name: firmware-${{ matrix.shard }}
           path: artifacts/
+          if-no-files-found: warn
+
+      - name: Preserve exact pre-release debug symbols
+        if: ${{ always() && contains(github.ref_name, 'wip') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-symbols-${{ matrix.shard }}-${{ github.ref_name }}
+          path: symbols/*.elf
+          retention-days: 30
           if-no-files-found: warn
 
       - name: Report failed boards
@@ -175,7 +196,7 @@ jobs:
       - name: Assemble per-board flash packages
         run: |
           set -e
-          BOARDS="cyd_2432s028r cyd_2432s028r_plus e32r35t esp32-st7735s-128_160-ec11 esp32-st7789-320_240-ec11 esp32-ILI9341-320_240-ec11 esp32-ST7796-320_240-ec11 esp32s3-st7789-320_240-ec11 esp32s3-st7796-480_320-xpt2046-ec11 esp32s3-ILI9488-480_320-xpt2046-ec11 esp32s3-ILI9341-320_240-xpt2046-ec11 esp32c3-st7789-320_240-ec11 jc8048w550 esp32s3-JLC-SZP esp32s3-retro-go"
+          BOARDS="cyd_2432s028r cyd_2432s028r_plus e32r35t esp32-st7735s-128_160-ec11 esp32-st7789-320_240-ec11 esp32-ILI9341-320_240-ec11 esp32-ST7796-320_240-ec11 esp32s3-st7789-320_240-ec11 esp32s3-st7796-480_320-xpt2046-ec11 esp32s3-ILI9488-480_320-xpt2046-ec11 esp32s3-ILI9341-320_240-xpt2046-ec11 esp32c3-st7789-320_240-ec11 jc8048w550 esp32s3-sensecap-indicator esp32s3-JLC-SZP esp32s3-retro-go"
           for board in $BOARDS; do
             case "$board" in
               cyd_2432s028r|cyd_2432s028r_plus|e32r35t|esp32-st7735s-128_160-ec11|esp32-st7789-320_240-ec11|esp32-ILI9341-320_240-ec11|esp32-ST7796-320_240-ec11)
@@ -202,7 +223,7 @@ jobs:
             ls "$dest"
           done
           count=$(ls -d pkg/ESP-IDFv5.5-* | wc -l)
-          [ "$count" -eq 15 ] || { echo "::error::expected 15 board packages, got $count"; exit 1; }
+          [ "$count" -eq 16 ] || { echo "::error::expected 16 board packages, got $count"; exit 1; }
 
       # 聚合 package artifact：内部按 ESP-IDFv5.5-<board> 目录划分
       - uses: actions/upload-artifact@v4
@@ -248,7 +269,7 @@ jobs:
         shell: msys2 {0}
         run: |
           mkdir -p dist-win
-          cp src/ports/desktop/build/klipper_remote_desktop.exe src/ports/desktop/build/klipper_remote_simulator.exe src/ports/desktop/build/SDL2.dll dist-win/
+          cp src/ports/desktop/build/KlipperScreen-esp.exe src/ports/desktop/build/klipper_remote_simulator.exe src/ports/desktop/build/SDL2.dll dist-win/
           cp /ucrt64/share/licenses/cjson/LICENSE dist-win/cJSON-LICENSE.txt
           ls -la dist-win
 
@@ -286,12 +307,12 @@ jobs:
           set -e
           BUILD=src/ports/desktop/build
           mkdir -p dist-mac
-          cp "$BUILD/klipper_remote_desktop" "$BUILD/klipper_remote_simulator" dist-mac/
+          cp "$BUILD/KlipperScreen-esp" "$BUILD/klipper_remote_simulator" dist-mac/
 
-          SDL_REF=$(otool -L "$BUILD/klipper_remote_desktop" | awk '/libSDL2.*dylib/{print $1; exit}')
-          CJSON_REF=$(otool -L "$BUILD/klipper_remote_desktop" | awk '/libcjson.*dylib/{print $1; exit}')
+          SDL_REF=$(otool -L "$BUILD/KlipperScreen-esp" | awk '/libSDL2.*dylib/{print $1; exit}')
+          CJSON_REF=$(otool -L "$BUILD/KlipperScreen-esp" | awk '/libcjson.*dylib/{print $1; exit}')
           if [ -z "$SDL_REF" ] || [ -z "$CJSON_REF" ]; then
-            echo "missing dylib refs:"; otool -L "$BUILD/klipper_remote_desktop"; exit 1
+            echo "missing dylib refs:"; otool -L "$BUILD/KlipperScreen-esp"; exit 1
           fi
 
           SDL_DYLIB=$(basename "$SDL_REF")
@@ -301,14 +322,14 @@ jobs:
           # dylib 自身的 id 也要改，否则其他 mach-o 链它时记下的仍是 brew 绝对路径
           install_name_tool -id "@executable_path/$SDL_DYLIB" "dist-mac/$SDL_DYLIB"
           install_name_tool -id "@executable_path/$CJSON_DYLIB" "dist-mac/$CJSON_DYLIB"
-          for exe in klipper_remote_desktop klipper_remote_simulator; do
+          for exe in KlipperScreen-esp klipper_remote_simulator; do
             install_name_tool -change "$SDL_REF" "@executable_path/$SDL_DYLIB" "dist-mac/$exe"
           done
           install_name_tool -change "$CJSON_REF" "@executable_path/$CJSON_DYLIB" \
-            dist-mac/klipper_remote_desktop
+            dist-mac/KlipperScreen-esp
 
           # install_name_tool 会弄坏 arm64 的 ad-hoc 签名，重签（无证书签名即可跑）
-          codesign --force --sign - dist-mac/klipper_remote_desktop \
+          codesign --force --sign - dist-mac/KlipperScreen-esp \
             dist-mac/klipper_remote_simulator "dist-mac/$SDL_DYLIB" "dist-mac/$CJSON_DYLIB"
 
           # brew 不像 msys2 装 share/licenses，按所装版本从上游仓库取 cJSON LICENSE
@@ -318,7 +339,7 @@ jobs:
           curl -fL -o dist-mac/cJSON-LICENSE.txt \
             "https://raw.githubusercontent.com/DaveGamble/cJSON/master/LICENSE"
 
-          otool -L dist-mac/klipper_remote_desktop   # 验证引用已全部指向 @executable_path
+          otool -L dist-mac/KlipperScreen-esp   # 验证引用已全部指向 @executable_path
           ls -la dist-mac
 
       - uses: actions/upload-artifact@v4
@@ -326,9 +347,136 @@ jobs:
           name: desktop-macos-arm64-${{ github.ref_name }}
           path: dist-mac/
 
+  desktop-linux:
+    # 预编译 Linux 二进制：上位机（x86_64 / aarch64 的 Klipper 主机）不装编译链，
+    # 解压 tar.gz 跑 install.sh 即可。SDL2/cJSON 静态链接（X11/Wayland 库运行时
+    # dlopen），二进制只依赖 glibc；ubuntu-22.04 构建保证 glibc>=2.35 的发行版都能跑。
+    strategy:
+      matrix:
+        include:
+          - { runs-on: ubuntu-22.04,     arch: x86_64 }
+          - { runs-on: ubuntu-22.04-arm, arch: arm64 }
+          # armhf 无官方 runner，x86_64 上交叉编译（arm-linux-gnueabihf）
+          - { runs-on: ubuntu-22.04,     arch: armhf, cross: arm-linux-gnueabihf }
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps (native)
+        if: ${{ !matrix.cross }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build build-essential pkg-config curl ca-certificates \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev \
+            libxss-dev libxkbcommon-dev libwayland-dev libwayland-bin wayland-protocols \
+            libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev \
+            libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libibus-1.0-dev
+
+      - name: Install armhf cross toolchain + multiarch deps
+        if: ${{ matrix.cross }}
+        run: |
+          # runner 的 azure 镜像只带 amd64/i386，armhf 要走 ports.ubuntu.com：
+          # 先把现有源钉死 amd64，再为 armhf 加 ports 源，否则 apt update 404
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          for suite in jammy jammy-updates jammy-security; do
+            echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $suite main universe"
+          done | sudo tee /etc/apt/sources.list.d/armhf.list
+          sudo dpkg --add-architecture armhf
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build build-essential pkg-config curl ca-certificates \
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+            libx11-dev:armhf libxext-dev:armhf libxrandr-dev:armhf libxcursor-dev:armhf \
+            libxi-dev:armhf libxfixes-dev:armhf libxss-dev:armhf libxkbcommon-dev:armhf \
+            libwayland-dev:armhf wayland-protocols libegl1-mesa-dev:armhf \
+            libgles2-mesa-dev:armhf libdrm-dev:armhf libgbm-dev:armhf \
+            libasound2-dev:armhf libpulse-dev:armhf libudev-dev:armhf libdbus-1-dev:armhf
+          # SDL2 的 X11/Wayland 检测走 pkg-config，必须指向 armhf 的 .pc 目录
+          cat > /tmp/armhf.cmake <<'EOF'
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR arm)
+          set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+          set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+          set(CMAKE_FIND_ROOT_PATH /usr/arm-linux-gnueabihf /usr)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+          set(ENV{PKG_CONFIG_LIBDIR} "/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig")
+          EOF
+
+      - name: Fetch LVGL v9.3.0 (third_party/lvgl is gitignored)
+        run: |
+          curl -L -o /tmp/lvgl.tar.gz https://github.com/lvgl/lvgl/archive/refs/tags/v9.3.0.tar.gz
+          tar xzf /tmp/lvgl.tar.gz -C /tmp
+          mkdir -p third_party
+          mv /tmp/lvgl-9.3.0 third_party/lvgl
+
+      - name: Build static SDL2
+        run: |
+          curl -L -o /tmp/sdl2.tar.gz https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz
+          tar xzf /tmp/sdl2.tar.gz -C /tmp
+          TC=""
+          if [ -n "${{ matrix.cross }}" ]; then TC="-DCMAKE_TOOLCHAIN_FILE=/tmp/armhf.cmake"; fi
+          cmake -S /tmp/SDL2-2.30.9 -B /tmp/sdl2-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=OFF -DSDL_STATIC=ON \
+            -DCMAKE_INSTALL_PREFIX=/tmp/sdl2-install $TC
+          cmake --build /tmp/sdl2-build
+          cmake --install /tmp/sdl2-build
+
+      - name: Build static cJSON
+        run: |
+          curl -L -o /tmp/cjson.tar.gz https://github.com/DaveGamble/cJSON/archive/refs/tags/v1.7.18.tar.gz
+          tar xzf /tmp/cjson.tar.gz -C /tmp
+          TC=""
+          if [ -n "${{ matrix.cross }}" ]; then TC="-DCMAKE_TOOLCHAIN_FILE=/tmp/armhf.cmake"; fi
+          cmake -S /tmp/cJSON-1.7.18 -B /tmp/cjson-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DENABLE_CJSON_TEST=OFF \
+            -DCMAKE_INSTALL_PREFIX=/tmp/cjson-install $TC
+          cmake --build /tmp/cjson-build
+          cmake --install /tmp/cjson-build
+
+      - name: Build KlipperScreen-esp (Linux)
+        run: |
+          cd src/ports/desktop
+          TC=""
+          if [ -n "${{ matrix.cross }}" ]; then TC="-DCMAKE_TOOLCHAIN_FILE=/tmp/armhf.cmake"; fi
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="/tmp/sdl2-install;/tmp/cjson-install" $TC
+          cmake --build build --target KlipperScreen-esp
+          # 静态链接验收：动态依赖里不得出现 SDL2 / cjson
+          if [ -n "${{ matrix.cross }}" ]; then
+            arm-linux-gnueabihf-objdump -p build/KlipperScreen-esp | grep NEEDED
+            if arm-linux-gnueabihf-objdump -p build/KlipperScreen-esp | grep NEEDED | grep -Ei 'sdl|cjson'; then
+              echo "::error::SDL2/cJSON not statically linked"; exit 1
+            fi
+          else
+            if ldd build/KlipperScreen-esp | grep -Ei 'sdl|cjson'; then
+              echo "::error::SDL2/cJSON not statically linked"; exit 1
+            fi
+            ldd build/KlipperScreen-esp
+          fi
+
+      - name: Package tarball (bin + install.sh + systemd unit)
+        run: |
+          PKG=dist-linux
+          mkdir -p "$PKG/bin"
+          cp src/ports/desktop/build/KlipperScreen-esp "$PKG/bin/"
+          cp scripts/linux/install.sh scripts/linux/uninstall.sh \
+             scripts/linux/KlipperScreen-esp-start.sh scripts/linux/KlipperScreen-esp.service "$PKG/"
+          chmod +x "$PKG/bin/KlipperScreen-esp" "$PKG/install.sh" "$PKG/uninstall.sh" \
+             "$PKG/KlipperScreen-esp-start.sh"
+          tar czf desktop-linux-${{ matrix.arch }}.tar.gz -C "$PKG" .
+          tar tzf desktop-linux-${{ matrix.arch }}.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-${{ matrix.arch }}-${{ github.ref_name }}
+          path: desktop-linux-${{ matrix.arch }}.tar.gz
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [package, desktop-win, desktop-mac]
+    needs: [package, desktop-win, desktop-mac, desktop-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -350,20 +498,42 @@ jobs:
           name: desktop-macos-arm64-${{ github.ref_name }}
           path: dl/desktop-mac
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-x86_64-${{ github.ref_name }}
+          path: dl/linux-x64
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-arm64-${{ github.ref_name }}
+          path: dl/linux-arm64
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-armhf-${{ github.ref_name }}
+          path: dl/linux-armhf
+
       - name: Zip artifacts for release
         # 资产名不带版本号：releases/latest/download/<名字> 直链永远指向最新正式版，
         # 文档站板型页的下载链接依赖这一点
         run: |
           count=$(ls -d dl/pkg/ESP-IDFv5.5-* | wc -l)
-          [ "$count" -eq 15 ] || { echo "::error::expected 15 board packages, got $count"; exit 1; }
+          [ "$count" -eq 16 ] || { echo "::error::expected 16 board packages, got $count"; exit 1; }
           for d in dl/pkg/ESP-IDFv5.5-*; do
             b=$(basename "$d")
             (cd "$d" && zip -r "$GITHUB_WORKSPACE/$b.zip" .)
           done
           (cd dl/desktop-win && zip -r "$GITHUB_WORKSPACE/desktop-win-x86_64.zip" .)
           # artifact 往返可能丢 unix 执行位，zip 前先补回（zip 会保存权限位）
-          (cd dl/desktop-mac && chmod +x klipper_remote_desktop klipper_remote_simulator && zip -r "$GITHUB_WORKSPACE/desktop-macos-arm64.zip" .)
-          ls -la "$GITHUB_WORKSPACE"/*.zip
+          (cd dl/desktop-mac && chmod +x KlipperScreen-esp klipper_remote_simulator && zip -r "$GITHUB_WORKSPACE/desktop-macos-arm64.zip" .)
+          # Linux 产物在构建 job 里已打成 tar.gz（保留执行位），直接搬上来
+          cp dl/linux-x64/desktop-linux-x86_64.tar.gz dl/linux-arm64/desktop-linux-arm64.tar.gz \
+             dl/linux-armhf/desktop-linux-armhf.tar.gz "$GITHUB_WORKSPACE/"
+          # md5 边车：Linux 上位机"检查更新"下载后据此校验完整性
+          for f in desktop-linux-x86_64.tar.gz desktop-linux-arm64.tar.gz desktop-linux-armhf.tar.gz; do
+            (cd "$GITHUB_WORKSPACE" && md5sum "$f" > "$f.md5")
+          done
+          ls -la "$GITHUB_WORKSPACE"/*.zip "$GITHUB_WORKSPACE"/*.tar.gz "$GITHUB_WORKSPACE"/*.md5
 
       - uses: softprops/action-gh-release@v2
         with:
@@ -371,15 +541,24 @@ jobs:
             ESP-IDFv5.5-*.zip
             desktop-win-x86_64.zip
             desktop-macos-arm64.zip
+            desktop-linux-x86_64.tar.gz
+            desktop-linux-arm64.tar.gz
+            desktop-linux-armhf.tar.gz
+            desktop-linux-x86_64.tar.gz.md5
+            desktop-linux-arm64.tar.gz.md5
+            desktop-linux-armhf.tar.gz.md5
           # 板型产物说明（引脚/接线/刷机地址）见文档站，自动生成 notes 会附加在其后
           body: |
             **Supported boards / 支持的板型**: https://umeiko.github.io/KlipperScreen-esp/boards/
 
-            每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面模拟器。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
+            每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面端；`desktop-linux-x86_64.tar.gz` / `desktop-linux-arm64.tar.gz` / `desktop-linux-armhf.tar.gz` 是 Linux 上位机预编译包（静态链接 SDL2，解压后运行 `install.sh`，可选 systemd 独占显示服务或桌面 App，支持 Wayland-weston / X11）。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
 
             **本版更新 / What's new**
-            - 新增板型构建 / New board target: `ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11`（ESP32-S3 + ILI9341 320×240 + XPT2046 共总线 + EC11；引脚与 esp32s3-st7796-480_320-xpt2046-ec11 完全兼容 / pin-compatible with the st7796 variant）
-            - ESP32-C3 机型显示与编码器稳定性修复 / ESP32-C3 display and encoder stability fixes
+            - 新增：Linux 版"关于本机"内可检查更新——查询 GitHub latest release、下载对应架构包、md5 校验，可暂停/取消，确认后原地替换二进制并由 systemd 拉起 / In-app self-update for Linux hosts with pause/cancel, MD5 verification and atomic binary swap
+            - 新增：Linux 崩溃信号（SIGSEGV 等）backtrace 落盘到日志，启动脚本按自然日轮转（保留一天），日志不再无限增长 / Crash backtraces logged to file on Linux; daily log rotation
+            - 新增：desktop-linux-armhf（32 位 ARM，如旧款树莓派）构建 / New desktop-linux-armhf build for 32-bit ARM hosts
+            - 完善：Linux 板型显示带工具链与架构（如 GCC-Linux-arm64）；检查更新页显示来源与包名；关于页双行子栏不再嵌套滚动；亮度下限钳到 5% / Board name now shows toolchain+arch; about panel no nested scrolling; brightness floor at 5%
+            - 修复：归零 XY 只归零 X；90/270° 旋转及长列表时下拉框被标题栏遮挡点不到首项 / Fix G28 XY homing only X; fix dropdown lists hidden under the title bar
           generate_release_notes: true
           # 标签含 wip（如 v0.2.0-wip.1）时标为预发布，不抢占 latest
           prerelease: ${{ contains(github.ref_name, 'wip') }}

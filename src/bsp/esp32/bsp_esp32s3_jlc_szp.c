@@ -224,6 +224,7 @@ void bsp_delay_ms(uint32_t ms)
 
 /* ---------- 反色 / 180° 旋转 / 水平镜像（运行时生效，设置项由 app 层落盘/回读） ---------- */
 static bool disp_rot180, disp_mirrorx;
+static bool disp_bgr = true;
 
 bool bsp_disp_can_invert(void)    { return true; }
 bool bsp_disp_can_rotate180(void) { return true; }
@@ -241,7 +242,15 @@ static void madctl_apply(void)
 {
     uint8_t v = disp_rot180 ? MADCTL_LAND_180 : MADCTL_LAND;
     if (disp_mirrorx) v ^= 0x80;
+    v = (v & ~0x08) | (disp_bgr ? 0x08 : 0);
     lcd_cmd_params(ST7789_MADCTL, &v, 1);
+}
+
+static bool color_order_apply(bool bgr)
+{
+    disp_bgr = bgr;
+    madctl_apply();
+    return true;
 }
 
 void bsp_disp_set_rotate180(bool en)
@@ -447,6 +456,7 @@ void bsp_init(void)
     /* ST7789 初始化（复刻 TFT_eSPI 序列），随后设横屏 MADCTL */
     st7789_init_sequence();
     lcd_cmd_params(ST7789_MADCTL, (uint8_t[]){ MADCTL_LAND }, 1);
+    bsp_disp_color_order_register(true, color_order_apply);
 
     /* 触摸 FT6336（I2C0）：驱动按 x_max/y_max + swap/mirror 直接输出屏幕坐标，无需校准 */
     esp_lcd_panel_io_handle_t tp_io;

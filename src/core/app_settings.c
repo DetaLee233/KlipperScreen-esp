@@ -187,6 +187,21 @@ bool settings_load_moonraker(moonraker_conf_t *out)
     return settings_load_moonraker_slot(settings_load_active_printer(), out);
 }
 
+/* 首次启动播种：moonraker.conf 不存在时，用平台默认（目前只有 Linux 上位机
+ * 提供：127.0.0.1 + 本机用户名）预填打印机槽 0。文件已存在就原样返回——
+ * 用户手动清空槽位也不会被复活。 */
+void settings_seed_defaults(void)
+{
+    char probe[8];
+    if (bsp_conf_read("moonraker.conf", probe, sizeof(probe)) >= 0) return;
+    moonraker_conf_t conf;
+    memset(&conf, 0, sizeof(conf));
+    conf.port = 7125;
+    if (!bsp_conf_default_printer(conf.host, sizeof(conf.host),
+                                  conf.name, sizeof(conf.name))) return;
+    settings_save_moonraker_slot(0, &conf);
+}
+
 bool settings_save_printer_name_slot(int slot, const char *name)
 {
     if (slot < 0 || slot >= PRINTER_SLOTS || !name) return false;
@@ -484,6 +499,45 @@ int  settings_load_display_rotate(void)      { return ksc_load_int("display_rota
 bool settings_save_display_rotate(int en)    { return ksc_save_int("display_rotate", en ? 1 : 0); }
 int  settings_load_display_mirror(void)      { return ksc_load_int("display_mirrorx", 0) != 0; }
 bool settings_save_display_mirror(int en)    { return ksc_save_int("display_mirrorx", en ? 1 : 0); }
+int  settings_load_display_rotation(void)
+{
+    int d = ksc_load_int("display_rotation", 0);
+    return (d == 90 || d == 180 || d == 270) ? d : 0;
+}
+bool settings_save_display_rotation(int deg) { return ksc_save_int("display_rotation", deg); }
+
+int settings_load_display_color_order(void)
+{
+    char val[16];
+    char *buf = conf_load("klipperscreen.conf");
+    if (!buf) return 0;
+    bool got = kv_get(buf, "display_color_order", val, sizeof(val));
+    free(buf);
+    if (!got || strlen(val) != 1 || val[0] < '0' || val[0] > '2') return 0;
+    return val[0] - '0';
+}
+
+bool settings_save_display_color_order(int order)
+{
+    return order >= 0 && order <= 2 && ksc_save_int("display_color_order", order);
+}
+
+int settings_load_encoder_counts(void)
+{
+    char val[16];
+    char *buf = conf_load("klipperscreen.conf");
+    if (!buf) return 0;
+    bool got = kv_get(buf, "encoder_counts", val, sizeof(val));
+    free(buf);
+    /* 不用 atoi：拒绝 "2oops" 等残缺配置，安全回到板型默认。 */
+    if (!got || strlen(val) != 1 || val[0] < '0' || val[0] > '8') return 0;
+    return val[0] - '0';
+}
+
+bool settings_save_encoder_counts(int counts)
+{
+    return counts >= 0 && counts <= 8 && ksc_save_int("encoder_counts", counts);
+}
 
 void settings_load_theme(char *out, size_t len)
 {

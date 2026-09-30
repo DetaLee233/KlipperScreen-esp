@@ -10,7 +10,10 @@
  */
 #include "bambu_runtime_esp32.h"
 #include "bambu_http_esp32.h"
+#include "bambu_monitor_esp32_internal.h"
 #include "bambu_secret_esp32.h"
+
+#include "bambu_monitor.h"
 
 #include "bsp_wifi.h"
 #include "cJSON.h"
@@ -57,6 +60,8 @@ typedef struct {
 static StaticSemaphore_t g_mutex_buf;
 static SemaphoreHandle_t g_mutex;
 static QueueHandle_t g_queue;
+static SemaphoreHandle_t g_monitor_wake;
+static QueueSetHandle_t g_actor_waitset;
 static bambu_cloud_snapshot_t g_snapshot;
 static char g_token[TOKEN_MAX];
 static char g_user_id[96];
@@ -625,19 +630,38 @@ static void actor_task(void *arg)
     (void)arg;
     cmd_t *cmd = NULL;
     while (1) {
-        if (xQueueReceive(g_queue, &cmd, portMAX_DELAY) != pdTRUE || !cmd)
-            continue;
-        op_t op = cmd->op;
-        log_resources("begin", op);
-        run_command(cmd);
-        log_resources("end", op);
-        bambu_http_wipe(cmd, sizeof(*cmd));
-        free(cmd);
-        if (op != OP_ERASE_SECRET) {
-            xSemaphoreTake(g_mutex, portMAX_DELAY);
-            g_outstanding = 0;
-            xSemaphoreGive(g_mutex);
+        TickType_t wait = bambu_monitor_actor_needs_tick()
+                        ? pdMS_TO_TICKS(100) : portMAX_DELAY;
+        cmd = NULL;
+        QueueSetMemberHandle_t ready = xQueueSelectFromSet(g_actor_waitset,
+                                                           wait);
+        if (ready == g_monitor_wake) {
+            xSemaphoreTake(g_monitor_wake, 0);
+            /* If an HTTP command was already ready alongside the coalesced
+               wake, select it through the queue set before touching g_queue. */
+            ready = xQueueSelectFromSet(g_actor_waitset, 0);
         }
+        if (ready == g_queue) {
+            xQueueReceive(g_queue, &cmd, 0);
+        }
+        if (cmd) {
+            op_t op = cmd->op;
+            /* HTTP/NVS commands own the network actor.  Releasing the MQTT
+               client first prevents overlapping TLS heaps on non-PSRAM CYD. */
+            bambu_monitor_actor_suspend();
+            log_resources("begin", op);
+            run_command(cmd);
+            log_resources("end", op);
+            bambu_http_wipe(cmd, sizeof(*cmd));
+            free(cmd);
+            if (op != OP_ERASE_SECRET) {
+                xSemaphoreTake(g_mutex, portMAX_DELAY);
+                g_outstanding = 0;
+                xSemaphoreGive(g_mutex);
+            }
+            bambu_monitor_actor_resume();
+        }
+        bambu_monitor_actor_tick();
     }
 }
 
@@ -661,6 +685,34 @@ void bambu_rt_init(void)
             return;
         }
     }
+    if (!g_monitor_wake) g_monitor_wake = xSemaphoreCreateBinary();
+    if (g_monitor_wake && !g_actor_waitset) {
+        g_actor_waitset = xQueueCreateSet(QUEUE_DEPTH + 1);
+        if (g_actor_waitset) {
+            BaseType_t queue_added = xQueueAddToSet(g_queue,
+                                                     g_actor_waitset);
+            BaseType_t wake_added = queue_added == pdPASS
+                                  ? xQueueAddToSet(g_monitor_wake,
+                                                   g_actor_waitset)
+                                  : pdFAIL;
+            if (queue_added != pdPASS || wake_added != pdPASS) {
+                if (wake_added == pdPASS)
+                    xQueueRemoveFromSet(g_monitor_wake, g_actor_waitset);
+                if (queue_added == pdPASS)
+                    xQueueRemoveFromSet(g_queue, g_actor_waitset);
+                vQueueDelete(g_actor_waitset);
+                g_actor_waitset = NULL;
+            }
+        }
+    }
+    if (!g_monitor_wake || !g_actor_waitset) {
+        xSemaphoreTake(g_mutex, portMAX_DELAY);
+        g_snapshot.state = BAMBU_CLOUD_FAILED;
+        copy_text(g_snapshot.message, sizeof(g_snapshot.message),
+                  "内存不足，无法完成操作");
+        xSemaphoreGive(g_mutex);
+        return;
+    }
 
     xSemaphoreTake(g_mutex, portMAX_DELAY);
     memset(&g_snapshot, 0, sizeof(g_snapshot));
@@ -669,16 +721,19 @@ void bambu_rt_init(void)
     copy_text(g_snapshot.message, sizeof(g_snapshot.message), "请输入拓竹账号");
     xSemaphoreGive(g_mutex);
 
-    bambu_secret_t sec;
-    if (bambu_secret_load(&sec)) {
+    /* In Bambu mode the main panel asks printer_state() while ui_app_create()
+       still has a deep LVGL call chain.  Keeping the 2.3 KiB NVS profile on
+       that 3.5 KiB main-task stack overflows before Wi-Fi even starts. */
+    bambu_secret_t *sec = calloc(1, sizeof(*sec));
+    if (sec && bambu_secret_load(sec)) {
         char user_id[96] = {0};
-        if (sec.user_id[0]) copy_text(user_id, sizeof(user_id), sec.user_id);
-        else jwt_user_id(sec.token, user_id, sizeof(user_id));
+        if (sec->user_id[0]) copy_text(user_id, sizeof(user_id), sec->user_id);
+        else jwt_user_id(sec->token, user_id, sizeof(user_id));
         xSemaphoreTake(g_mutex, portMAX_DELAY);
-        copy_text(g_snapshot.account, sizeof(g_snapshot.account), sec.account);
-        g_snapshot.region = sec.region == BAMBU_CLOUD_REGION_CHINA
+        copy_text(g_snapshot.account, sizeof(g_snapshot.account), sec->account);
+        g_snapshot.region = sec->region == BAMBU_CLOUD_REGION_CHINA
                           ? BAMBU_CLOUD_REGION_CHINA : BAMBU_CLOUD_REGION_GLOBAL;
-        copy_text(g_token, sizeof(g_token), sec.token);
+        copy_text(g_token, sizeof(g_token), sec->token);
         copy_text(g_user_id, sizeof(g_user_id), user_id);
         g_snapshot.state = BAMBU_CLOUD_SIGNED_IN;
         copy_text(g_snapshot.message, sizeof(g_snapshot.message),
@@ -686,7 +741,10 @@ void bambu_rt_init(void)
         xSemaphoreGive(g_mutex);
         bambu_http_wipe(user_id, sizeof(user_id));
     }
-    bambu_http_wipe(&sec, sizeof(sec));
+    if (sec) {
+        bambu_http_wipe(sec, sizeof(*sec));
+        free(sec);
+    }
 
     if (xTaskCreate(actor_task, "bambu_net", ACTOR_STACK, NULL,
                     tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
@@ -852,6 +910,7 @@ bool bambu_rt_refresh_devices(void)
 void bambu_rt_logout(void)
 {
     bambu_rt_init();
+    bambu_monitor_stop();
     g_generation++;
 
     /* NVS wipe rides the same queue so it cannot interleave with an
@@ -860,6 +919,7 @@ void bambu_rt_logout(void)
     cmd_t *erase = NULL;
     if (g_ready && g_queue) {
         erase = calloc(1, sizeof(*erase));
+        if (erase) erase->op = OP_ERASE_SECRET;
         if (erase && xQueueSend(g_queue, &erase, 0) != pdTRUE) {
             free(erase);
             erase = NULL;
@@ -879,4 +939,38 @@ void bambu_rt_logout(void)
     copy_text(g_snapshot.message, sizeof(g_snapshot.message), "请输入拓竹账号");
     xSemaphoreGive(g_mutex);
     ESP_LOGI(TAG, "signed out");
+}
+
+bool bambu_rt_copy_mqtt_credentials(bambu_cloud_region_t *region,
+                                    char *user_id, size_t user_id_cap,
+                                    char *token, size_t token_cap)
+{
+    if (!region || !user_id || user_id_cap == 0 ||
+        !token || token_cap == 0 || !g_mutex)
+        return false;
+    xSemaphoreTake(g_mutex, portMAX_DELAY);
+    bool ok = g_snapshot.state == BAMBU_CLOUD_SIGNED_IN &&
+              g_user_id[0] && g_token[0] &&
+              strlen(g_user_id) < user_id_cap &&
+              strlen(g_token) < token_cap;
+    if (ok) {
+        *region = g_snapshot.region;
+        copy_text(user_id, user_id_cap, g_user_id);
+        copy_text(token, token_cap, g_token);
+    } else {
+        user_id[0] = 0;
+        token[0] = 0;
+    }
+    xSemaphoreGive(g_mutex);
+    return ok;
+}
+
+void bambu_rt_wake(void)
+{
+    if (g_monitor_wake) xSemaphoreGive(g_monitor_wake);
+}
+
+void bambu_rt_wipe(void *ptr, size_t len)
+{
+    bambu_http_wipe(ptr, len);
 }

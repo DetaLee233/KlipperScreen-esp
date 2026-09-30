@@ -125,13 +125,17 @@ static lv_obj_t *create(void)
             lv_obj_align(logos[i], LV_ALIGN_LEFT_MID, ui_px(4), 0);
             lbl_x = ui_px(4) + 25 + ui_px(4);
         } else {
-            lv_image_set_scale(logos[i], 146);   /* 56→约 32px；大屏 112→约 64px */
-            /* 缩放以图像中心为轴，按原始边界对齐会留下 12/24px 空白。 */
-            lv_obj_align(logos[i], LV_ALIGN_LEFT_MID, -ui_px(12), 0);
-            lbl_x = ui_px(40);
+            /* 视觉目标 32 逻辑 px；缩放以图像中心为轴，向左补偿 (原边长-目标)/2 的空白，
+               各档原图（56/112/224）都按实际边长算，huge 档不再压字。 */
+            int logo_px = ui_px(32);
+            int src_px = (int)((const lv_image_dsc_t *)lv_image_get_src(logos[i]))->header.w;
+            lv_image_set_scale(logos[i], (uint32_t)(256 * logo_px / src_px));
+            lv_obj_align(logos[i], LV_ALIGN_LEFT_MID, -(src_px - logo_px) / 2, 0);
+            lbl_x = logo_px + ui_px(8);
         }
 
         lbl_name[i] = theme_label(card, "", THEME_FONT_M, THEME_COL_TEXT);
+        lv_obj_set_width(lbl_name[i], slot_w - 2 * THEME_PAD - lbl_x);
         lv_label_set_long_mode(lbl_name[i], LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_align(lbl_name[i], LV_ALIGN_TOP_LEFT, lbl_x, 0);
         lbl_host[i] = theme_label(card, "", THEME_FONT_S, THEME_COL_TEXT_DIM);

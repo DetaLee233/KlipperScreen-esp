@@ -369,6 +369,23 @@ int main(void)
         CHECK(st.progress_percent == 0);
     }
 
+    /* 14. 超长键（>BAMBUSTREAM_KEY_MAX）不得判畸形：真实全量 push_status
+           含 "buildplate_marker_detector"（26 字符）这类长键 */
+    TEST("overlong keys do not poison the message");
+    {
+        static const char msg[] =
+            "{\"print\":{\"gcode_state\":\"RUNNING\",\"mc_percent\":42,"
+            "\"xcam\":{\"buildplate_marker_detector\":true},"
+            "\"a_very_long_unknown_key_name_here\":123456,"
+            "\"nozzle_temper\":220.5}}";
+        bambu_status_t st;
+        status_reset(&st);
+        CHECK(run_msg(msg, sizeof(msg) - 1, &st));
+        CHECK(st.state == BAMBU_PRINT_RUNNING);
+        CHECK(st.progress_percent == 42);
+        CHECK(feq(st.nozzle_temp, 220.5f));
+    }
+
     /* 堆纯净窗口：reset 计数后只做解析器调用（stdio 预热malloc 不进入窗口） */
     TEST("zero heap during parsing");
     {

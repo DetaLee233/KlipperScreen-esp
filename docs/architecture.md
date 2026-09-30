@@ -2,7 +2,7 @@
 
 > 项目：**KlipperScreen-esp**（Klipper-Remote-ESP32-Displays），MIT 协议。
 > 状态：v0.5.0（2026-09）——本文描述当前代码的真实架构，只写已落地的内容。
-> 相关文档：[从源码构建](building.md) · [支持的板子](boards.md) · [移植新板型](porting.md) · [贡献板型](contributing-board.md) · [Moonraker API 细节](klipper-moonraker-api.md) · [JC8048W550 RGB 屏排障指南](jc8048w550-rgb-display-guide.md)
+> 相关文档：[从源码构建](building.md) · [支持的板子](boards.md) · [移植新板型](porting.md) · [Moonraker API 细节](klipper-moonraker-api.md) · [JC8048W550 RGB 屏排障指南](jc8048w550-rgb-display-guide.md)
 
 ---
 
@@ -99,7 +99,7 @@ UI 库为 **LVGL 9.3**。界面参考 KlipperScreen 的交互设计，并加入�
 - `bsp_lcd_push()` / `bsp_delay_ms()`：LVGL 场景外直推 RGB565 像素（开机动画用）。
 - 屏幕电源一组：`bsp_set_brightness()` / `bsp_set_screen_timeout()` / `bsp_screen_activity()` / `bsp_screen_off/wake/toggle/is_off()` / `bsp_fade_out()`，语义见 §5。
 - 显示偏好：`bsp_disp_can_invert/set_invert`、`bsp_disp_can_rotate180/set_rotate180`——SPI 屏支持（panel 命令 + 触摸坐标翻转），JC8048W550（RGB 并口）与 desktop 不支持，`can_*` 让 UI 隐藏对应开关。
-- `bsp_restart()`：重建全部 UI 的场景用（语言切换）；`bsp_time_sync_from_host()`：从 Moonraker 主机 HTTP Date 头兜底校时。
+- `bsp_restart()`：重建全部 UI 的场景用（语言切换）；`bsp_time_sync_from_http_date()` 统一消费标准 HTTP Date，`bsp_time_sync_from_host()` 异步从 Moonraker 主机取得该响应头。
 
 BSP 还有两个配套抽象：
 
@@ -127,16 +127,18 @@ BSP 还有两个配套抽象：
 | `esp32s3-ILI9488-480_320-xpt2046-ec11` | ESP32-S3 | 480×320 ILI9488（18-bit SPI） | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
 | `esp32s3-ILI9341-320_240-xpt2046-ec11` | ESP32-S3 | 320×240 ILI9341 | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
 | `jc8048w550` | ESP32-S3 | 5" 800×480 RGB 并口 | GT911 电容触摸 | 自研 rgb44（见下） |
+| `esp32s3-sensecap-indicator` | ESP32-S3 | 4" 480×480 ST7701S RGB 并口 | FT5x06 电容触摸 | 自研 rgb44（同 JC8048） |
 | `esp32s3-JLC-SZP` | ESP32-S3 | 2.0" 320×240 ST7789 | FT6336 电容触摸 | 手动 SPI（见下） |
 | `esp32s3-retro-go` | ESP32-S3 | 3.2" 320×240 ST7789 | GPIO 按键（无触摸） | esp_lcd SPI |
 | `esp32c3-st7789-320_240-ec11` | ESP32-C3 | 320×240 ST7789 | EC11 旋钮（无触摸，软件正交解码） | esp_lcd SPI |
 
-两块特殊板型：
+三块特殊板型：
 
 - **JC8048W550**：不用 IDF 5.5 的 `esp_lcd_rgb_panel`，用自研驱动 `src/bsp/esp32/rgb44.c`（IDF 4.4 传输模型：每帧扫完自停 + vsync 全量重启，欠载帧下一拍自愈）+ LVGL DIRECT 双缓冲（PSRAM 双 fb，vsync 换页，flush 前整帧 `esp_cache_msync` 回写）。完整机制链与测量过程见 [jc8048w550-rgb-display-guide.md](jc8048w550-rgb-display-guide.md)，这里不展开。
+- **SenseCAP Indicator**：与 JC8048 共用同一套 rgb44 + LVGL DIRECT 双缓冲渲染路径（PCLK 12MHz，480×480 方形屏），差异在面板初始化（ST7701S 位 bang 3 线 9-bit SPI，CS/RST 挂 TCA9535 I²C 扩展器）和触摸（FT5x06，GX 批次地址 0x48）。详见 [boards.md](boards.md#sensecap-indicator)。
 - **esp32s3-JLC-SZP（立创实战派）**：不用 esp_lcd 面板驱动——CS 在 PCA9557 I²C 扩展器上，面板要求每笔交易都有 CS 下降沿，BSP 直接 SPI master + 手动控 CS/DC，初始化序列照抄 TFT_eSPI。
 
-新增板型的完整流程见 [porting.md](porting.md) 与 [contributing-board.md](contributing-board.md)。
+新增板型的完整流程与登记清单见 [porting.md](porting.md)。
 
 ---
 
@@ -250,7 +252,7 @@ UI 触摸/旋钮 ──▶ klipper_api_* 拼 RPC ──▶ esp_websocket_client_
 
 ### 7.5 Windows 桌面端
 
-真实控制端与 simulator 是**两个构建目标**（`klipper_remote_desktop` / `klipper_remote_simulator`），mock 状态不会进入实际控制链路。Windows 网络在独立 worker 线程收发与路由 JSON-RPC，状态更新同样经 `lv_async_call` 投回持锁的 LVGL 主线程。配置存 `%APPDATA%\KlipperRemote`。macOS/Linux 构建桌面目标（POSIX sockets 客户端）。
+真实控制端与 simulator 是**两个构建目标**（`KlipperScreen-esp` / `klipper_remote_simulator`），mock 状态不会进入实际控制链路。Windows 网络在独立 worker 线程收发与路由 JSON-RPC，状态更新同样经 `lv_async_call` 投回持锁的 LVGL 主线程。配置存 `%APPDATA%\KlipperRemote`。macOS/Linux 构建桌面目标（POSIX sockets 客户端）。
 
 ---
 
@@ -259,10 +261,12 @@ UI 触摸/旋钮 ──▶ klipper_api_* 拼 RPC ──▶ esp_websocket_client_
 Core 层三个小接口，平台差异收在 Ports 层：
 
 - **云登录**（`bambu_cloud.h`）：异步接口（区域选择、密码/邮箱验证码/短信验证码登录、设备列表、登出），UI 只面对 snapshot。ESP32 实现在 `src/ports/esp32/bambu/`（bambu_net actor 任务跑全部 HTTPS，NVS 存凭据；内部笔记见该目录 `DEVNOTES.md`），Windows 用 `bambu_cloud_winhttp.c`。
-- **状态监视**（`bambu_monitor.h`）：云端 MQTT 只读监视。Windows 已实现（`bambu_monitor_openssl.c`）；ESP32 目前链接 core 里的 `bambu_monitor_stub.c`（云登录与设备选择已可用，monitor 未接入）。
+- **状态监视**（`bambu_monitor.h`）：云端 MQTT 只读监视。Windows 使用 `bambu_monitor_openssl.c`；ESP32 使用 `bambu_monitor_esp32.c`，由同一个 `bambu_net` actor 串行编排 HTTPS/MQTT，4KiB TLS MFL + ESP-MQTT 分片直喂零分配解析器，避免无 PSRAM 板累计完整大包。
 - **状态模型与解析**：`bambu_status.c`（cJSON 版 merge 规则）与 `bambu_status_stream.c`（零分配流式解析器，ESP-MQTT 分片直喂，语义对齐前者；有宿主机单元测试 `tests/test_bambu_status_stream.c`）。
 
 Bambu 连接方式按槽位保存（`bambu_link_t`）：`CLOUD_MONITOR` 云端只读监视（已实现）；`LAN` 局域网开发者模式是预留路径（UI 已留入口，控制后端未实现）。**与 Moonraker 生命周期互斥**：切到 Bambu 时 `moonraker_stop()`，切回时 `moonraker_start()`，任一时刻只有一套网络连接。
+
+ESP32 标题栏时钟不依赖额外 NTP：Moonraker 模式读取本地主机响应的 `Date`，Bambu 模式复用现有云端 HTTPS 响应的 `Date`，两者都交给 BSP 的同一校时入口。
 
 ---
 

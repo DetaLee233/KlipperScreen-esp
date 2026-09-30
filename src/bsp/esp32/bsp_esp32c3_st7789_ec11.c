@@ -22,6 +22,7 @@
 #if CONFIG_BOARD_ESP32C3_ST7789_EC11
 
 #include "bsp.h"
+#include "bsp_lcd_color_io.h"
 #include "bsp_screen_power.h"
 #include "bsp_sleep_button.h"
 
@@ -293,6 +294,7 @@ void bsp_init(void)
     ESP_ERROR_CHECK(esp_lcd_panel_io_register_event_callbacks(
         io, &callbacks, NULL));
 
+    ESP_ERROR_CHECK(bsp_lcd_color_io_wrap(&io, false));
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = PIN_LCD_RST,
         /* 本批 ST7789 面板 MADCTL BGR=0 才与 LVGL RGB565 色序一致。 */

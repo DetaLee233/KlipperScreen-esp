@@ -1,8 +1,8 @@
 # KlipperScreen-esp
 
-**KlipperScreen-esp** is a compact, cross-platform display and controller for 3D printers. It runs on inexpensive ESP32 boards and Windows/macOS desktops, provides full **Klipper** control through **Moonraker**, and adds read-only **Bambu Cloud** monitoring on Windows. Its shared LVGL UI supports touch, rotary encoder, mouse, keyboard, or mixed input; the EC11 reference target demonstrates a rotary-only device.
+**KlipperScreen-esp** is a compact, cross-platform display and controller for 3D printers. It runs on inexpensive ESP32 boards and Windows/macOS desktops, provides full **Klipper** control through **Moonraker**, and adds read-only **Bambu Cloud** monitoring on ESP32 and desktop. Its shared LVGL UI supports touch, rotary encoder, mouse, keyboard, or mixed input; the EC11 reference target demonstrates a rotary-only device.
 
-![On-device photo](screenshots/main_photo.png)
+![On-device photo](screenshots/main_photo.jpg)
 
 The separately named SDL2 **simulator** uses mock data for layout development, input experiments, and screenshot testing without a printer.
 
@@ -12,8 +12,8 @@ The separately named SDL2 **simulator** uses mock data for layout development, i
 - **G-code files** — thumbnails, metadata, history, print/delete
 - **Control** — axis jog & homing, extrude/retract with cold-extrusion guard, temperature presets (PLA/PETG/ABS/cooldown), emergency stop & firmware restart with confirmation
 - **Robust link** — WebSocket auto-reconnect, app-level heartbeat with RTT display, zombie-connection detection, Klipper error toasts (e.g. endstop not triggered)
-- **Bambu status monitor** — Windows sign-in, verification code, bound-device selection, and cloud MQTT status sync are available. Cloud mode is read-only; LAN Developer Mode controls are reserved for a later backend.
-- **Extras** — "Umeko" boot animation, 5 languages (EN / 简中 / 繁中 / FR / IT, fade-to-black reboot on switch), brightness slider, auto screen-off with touch wake, title-bar clock synced from the Moonraker host (no internet needed)
+- **Bambu status monitor** — ESP32 and desktop support sign-in, verification codes, bound-device selection, and cloud MQTT status sync. Cloud mode is read-only; LAN Developer Mode controls are reserved for a later backend.
+- **Extras** — "Umeko" boot animation, 5 languages (EN / 简中 / 繁中 / FR / IT, fade-to-black reboot on switch), brightness slider, auto screen-off with touch wake, and a title-bar clock synced from the active backend's standard HTTP time
 - **Input paths** — no-touch rotary boards need no touch layer; resistive touch uses a board-specific calibration path; capacitive touch normally reports screen coordinates directly. Touch and rotary can coexist.
 
 ## Supported boards
@@ -44,11 +44,21 @@ Full pinouts and hardware details: [Supported boards](boards.md).
 
 For self-compiling see the repo README; to run the firmware on your own board see the [porting guide](porting.md). Start its input section by choosing the no-touch or touch route, then choose resistive or capacitive touch where applicable.
 
+## Touch calibration (resistive-touch boards)
+
+Resistive-touch boards (XPT2046: CYD 2432S028R / 2432S028R-PLUS, E32R35T, and the ESP32-S3 480×320 XPT2046 variants) support two-point calibration. A board without calibration data enters the calibration screen automatically on first boot; boards whose firmware ships default parameters can be re-calibrated anytime if taps feel off:
+
+- **While flashing**: the release package scripts (`flash.bat` / `flash.sh`) ask at the end whether to calibrate — answer `y` and the board is sent into the calibration screen over serial automatically. The developer path `tools/build-esp32.sh <board> flash COMx` asks the same question.
+- **Anytime**: connect a serial terminal at 115200 8N1 and send `caltouch`; the device reboots straight into the calibration screen.
+
+Tap the two crosses precisely; the result is saved to flash and loaded on every boot.
+
+![Touch calibration demo](screenshots/touch_calibration.gif)
+
 ## Documentation map
 
 - [Supported boards](boards.md) — hardware info and pinouts of existing boards
 - [Porting to your own board](porting.md) — the BSP contract and implementation notes
-- [Contributing a new board](contributing-board.md) — what a board-support PR must change and verify
 - [Screenshots](screenshots.md) — current English desktop simulator screens
 - [Architecture](architecture.md) — shared UI, BSP, desktop controller, and simulator structure
 - [Bambu integration notes](bambu-integration-architecture.md) — current read-only cloud boundary and planned LAN path

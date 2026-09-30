@@ -5,13 +5,14 @@
  *   wifi <ssid> <pass>     连接 AP（pass 为空则按开放网络连；含空格需整体作为其余行内容）
  *   mr <host> [port]       保存 moonraker.conf 并重连
  *   mrstart                按已存配置启动 moonraker 客户端
- *   status                 打印 wifi / moonraker 状态
+ *   status                 打印 wifi / moonraker 状态（含状态推送健康度 status_age/gate）
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -27,7 +28,7 @@
 #include "printer.h"
 
 #define TAG "cli"
-#define LINE_MAX 128
+#define CLI_LINE_MAX 128
 
 /* ---- 文件系统命令（LittleFS 挂在 /littlefs） ---- */
 static char cwd[64] = "/littlefs";
@@ -392,7 +393,7 @@ static void cli_handle(char *line)
         moonraker_start();
         printf("moonraker_start() called\n");
     } else if (!strcmp(line, "lcdstat")) {
-#if CONFIG_BOARD_JC8048W550
+#if CONFIG_BOARD_JC8048W550 || CONFIG_BOARD_SENSECAP_INDICATOR
         extern void bsp_lcd_stats_print(void);
         int secs = args ? atoi(args) : 0;
         if (secs > 0) {
@@ -403,11 +404,18 @@ static void cli_handle(char *line)
         }
         bsp_lcd_stats_print();
 #else
-        printf("lcdstat: 仅 JC8048W550（rgb44）支持\n");
+        printf("lcdstat: 仅 rgb44 机型（JC8048W550 / SenseCAP Indicator）支持\n");
 #endif
     } else if (!strcmp(line, "status")) {
-        printf("wifi=%s moonraker=%d rtt=%dms\n", wifi_state_str(bsp_wifi_status()),
-               (int)moonraker_state(), printer_rtt_ms());
+        char clock[24] = "unsynced";
+        time_t now = time(NULL);
+        struct tm *tmv = now >= 1767225600 ? localtime(&now) : NULL;
+        if (tmv) strftime(clock, sizeof(clock), "%Y-%m-%d_%H:%M:%S", tmv);
+        printf("wifi=%s moonraker=%d rtt=%dms status_age=%ds gate=%d clock=%s\n",
+               wifi_state_str(bsp_wifi_status()),
+               (int)moonraker_state(), printer_rtt_ms(),
+               moonraker_status_age_s(), (int)moonraker_status_gate_pending(),
+               clock);
     } else if (line[0]) {
         printf("unknown: '%s' (try help)\n", line);
     }
@@ -416,7 +424,7 @@ static void cli_handle(char *line)
 static void cli_task(void *arg)
 {
     (void)arg;
-    char line[LINE_MAX];
+    char line[CLI_LINE_MAX];
     int  len = 0;
     printf("\ncli ready, try 'help'\n");
     for (;;) {
@@ -433,7 +441,7 @@ static void cli_task(void *arg)
             fflush(stdout);
         } else if (c == '\b' || c == 0x7f) {
             if (len) len--;
-        } else if (len < LINE_MAX - 1) {
+        } else if (len < CLI_LINE_MAX - 1) {
             line[len++] = (char)c;
             putchar(c);                     /* 回显 */
             fflush(stdout);

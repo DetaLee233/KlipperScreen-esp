@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
-project(klipper_remote_desktop C)
+project(KlipperScreen-esp C)
+
+# 默认关闭：仅手动验收构建开启，不影响产品桌面端或 CI 发布产物。
+option(KR_ENCODER_SETTINGS_PREVIEW "Preview ESP32 encoder settings in simulator" OFF)
+option(KR_DISPLAY_SETTINGS_PREVIEW "Preview RGB/BGR display settings in simulator" OFF)
 
 # SDL2 desktop ports share every UI source. On Windows the primary target is
 # a real Moonraker controller; a separately named simulator keeps mock data an
@@ -29,11 +33,16 @@ file(GLOB UI_SRCS
 set(DESKTOP_COMMON_SRCS
     main.c
     ${SRC_ROOT}/bsp/bsp_screen_power.c
+    ${SRC_ROOT}/bsp/bsp_display_color.c
+    ${SRC_ROOT}/core/file_list_stream.c
     ${SRC_ROOT}/bsp/desktop/bsp_sdl2.c
+    ${SRC_ROOT}/bsp/desktop/bsp_linux_host.c
     ${SRC_ROOT}/bsp/desktop/bsp_wifi_windows.c
     ${SRC_ROOT}/bsp/desktop/bsp_wifi_linux.c
     ${SRC_ROOT}/bsp/desktop/bsp_conf_file.c
     ${SRC_ROOT}/core/app_settings.c
+    ${SRC_ROOT}/core/gcode_thumbnail.c
+    ${SRC_ROOT}/core/self_update.c
     ${UI_SRCS}
 )
 
@@ -69,7 +78,7 @@ if(WIN32)
 
     # 产品版使用 Windows GUI 子系统，双击启动时不创建控制台窗口。
     # simulator 保持默认 Console 子系统，便于查看 stdout 调试信息。
-    add_executable(klipper_remote_desktop WIN32
+    add_executable(KlipperScreen-esp WIN32
         ${DESKTOP_COMMON_SRCS}
         ${SRC_ROOT}/core/printer_model.c
         ${SRC_ROOT}/core/klipper_api.c
@@ -78,10 +87,10 @@ if(WIN32)
         bambu_cloud_winhttp.c
         bambu_monitor_openssl.c
     )
-    configure_desktop_target(klipper_remote_desktop)
-    target_include_directories(klipper_remote_desktop PRIVATE ${CJSON_INCLUDE_DIR}/cjson)
-    target_link_libraries(klipper_remote_desktop PRIVATE cjson-static winhttp crypt32
-        OpenSSL::SSL OpenSSL::Crypto ws2_32)
+    configure_desktop_target(KlipperScreen-esp)
+    target_include_directories(KlipperScreen-esp PRIVATE ${CJSON_INCLUDE_DIR}/cjson)
+    target_link_libraries(KlipperScreen-esp PRIVATE cjson-static winhttp crypt32
+        OpenSSL::SSL OpenSSL::Crypto ws2_32 iphlpapi)
 
     add_executable(klipper_remote_simulator
         ${DESKTOP_COMMON_SRCS}
@@ -94,7 +103,7 @@ if(WIN32)
     configure_desktop_target(klipper_remote_simulator)
     target_compile_definitions(klipper_remote_simulator PRIVATE KLIPPER_DESKTOP_SIMULATOR=1)
     target_include_directories(klipper_remote_simulator PRIVATE ${CJSON_INCLUDE_DIR}/cjson)
-    target_link_libraries(klipper_remote_simulator PRIVATE cjson-static winhttp crypt32)
+    target_link_libraries(klipper_remote_simulator PRIVATE cjson-static winhttp crypt32 iphlpapi ws2_32)
 else()
     # macOS / Linux：POSIX sockets 原生传输（moonraker_client_posix.c），
     # 另保留 mock 数据的 simulator 目标作开发/布局工具。
@@ -122,7 +131,7 @@ else()
 
     find_package(Threads REQUIRED)
 
-    add_executable(klipper_remote_desktop
+    add_executable(KlipperScreen-esp
         ${DESKTOP_COMMON_SRCS}
         ${SRC_ROOT}/core/printer_model.c
         ${SRC_ROOT}/core/klipper_api.c
@@ -131,7 +140,11 @@ else()
         ${SRC_ROOT}/core/bambu_monitor_stub.c
         ${SRC_ROOT}/core/bambu_cloud_stub.c
     )
-    configure_desktop_target(klipper_remote_desktop)
+    configure_desktop_target(KlipperScreen-esp)
+    if(NOT APPLE)
+        # -rdynamic：崩溃处理器的 backtrace 才能打出符号名（仅 Linux 有意义）
+        set_target_properties(KlipperScreen-esp PROPERTIES ENABLE_EXPORTS ON)
+    endif()
     # 代码写的是 #include "cJSON.h"，而头文件实际装在 include/cjson/ 子目录。
     # config 包会把 CJSON_INCLUDE_DIR 预设成 .../include 本体（不含子目录），
     # 所以换个变量名强制真实搜索（brew 实测踩坑）
@@ -139,8 +152,8 @@ else()
     if(NOT CJSON_HEADER_DIR)
         message(FATAL_ERROR "cJSON headers not found (brew install cjson / apt install libcjson-dev)")
     endif()
-    target_include_directories(klipper_remote_desktop PRIVATE ${CJSON_HEADER_DIR})
-    target_link_libraries(klipper_remote_desktop PRIVATE ${CJSON_LINK} Threads::Threads)
+    target_include_directories(KlipperScreen-esp PRIVATE ${CJSON_HEADER_DIR})
+    target_link_libraries(KlipperScreen-esp PRIVATE ${CJSON_LINK} Threads::Threads)
 
     add_executable(klipper_remote_simulator
         ${DESKTOP_COMMON_SRCS}
@@ -154,4 +167,11 @@ else()
     target_compile_definitions(klipper_remote_simulator PRIVATE KLIPPER_DESKTOP_SIMULATOR=1)
     target_include_directories(klipper_remote_simulator PRIVATE ${CJSON_HEADER_DIR})
     target_link_libraries(klipper_remote_simulator PRIVATE ${CJSON_LINK})
+endif()
+
+if(KR_ENCODER_SETTINGS_PREVIEW)
+    target_compile_definitions(klipper_remote_simulator PRIVATE KR_ENCODER_SETTINGS_PREVIEW=1)
+endif()
+if(KR_DISPLAY_SETTINGS_PREVIEW)
+    target_compile_definitions(klipper_remote_simulator PRIVATE KR_DISPLAY_SETTINGS_PREVIEW=1)
 endif()

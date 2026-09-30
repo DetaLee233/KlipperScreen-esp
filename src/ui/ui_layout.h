@@ -31,6 +31,14 @@ const lv_font_t *ui_font_l(void);      /* 大号数字  12 / 24 / 48（仅数字
 const lv_font_t *ui_font_xl(void);     /* 特大数字  16 / 28 / 48（仅数字/ASCII） */
 const lv_font_t *ui_font_icon(void);   /* LV_SYMBOL_* 图标 12 / 16 / 32 */
 
+/* 纯西文紧凑档（Lato 24，ASCII+Latin-1）：2x 大屏上拉丁语系长词缩一档用；
+   非 2x 档回退 ui_font_s()，非大屏板型不会链入 font_latin_24（省 flash） */
+const lv_font_t *ui_font_latin24(void);
+
+/* 温度等纯 ASCII 紧凑值的“正文小字再降一档”：10 / 12 / 24，
+   desktop huge 档为 32。按板型编译期选定，避免额外链接多套字体。 */
+const lv_font_t *ui_font_value_compact(void);
+
 /* 图标选择：有 32px 变体时大屏用 32，否则用 16 */
 const lv_image_dsc_t *ui_icon(const lv_image_dsc_t *i16, const lv_image_dsc_t *i32);
 

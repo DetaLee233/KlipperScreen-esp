@@ -7,6 +7,8 @@
 #include "../ui_anim.h"
 #include "../panel_mgr.h"
 #include "../ui_nav.h"
+#include "../widgets/gcode_thumb.h"
+#include "bsp_caps.h"
 #include "printer.h"
 #include <stdio.h>
 #include <string.h>
@@ -94,11 +96,26 @@ static lv_obj_t *create(void)
 
     lbl_name = theme_label(card, "", THEME_FONT_M, THEME_COL_TEXT);
     lv_obj_set_width(lbl_name, ui_content_w() - 2 * THEME_PAD);
+#if BSP_HAS_GCODE_THUMB
+    /* Keep the thumbnail area stable: the filename is always one line and
+     * long names scroll horizontally instead of wrapping over the image. */
+    lv_obj_set_height(lbl_name, lv_font_get_line_height(THEME_FONT_M) + ui_px(2));
+    lv_label_set_long_mode(lbl_name, LV_LABEL_LONG_SCROLL_CIRCULAR);
+#else
     lv_label_set_long_mode(lbl_name, LV_LABEL_LONG_WRAP);
+#endif
     lv_obj_align(lbl_name, LV_ALIGN_TOP_LEFT, 0, 0);
 
     lbl_info = theme_label(card, "", THEME_FONT_S, THEME_COL_TEXT_DIM);
     lv_obj_align(lbl_info, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+
+#if BSP_HAS_GCODE_THUMB
+    /* 缩略图填信息卡中部空白（Linux 本地解码；ESP32 PSRAM 板异步灰度） */
+    lv_obj_t *thumb = gcode_thumb_create(card, sel_name,
+                                         ui_content_w() - 2 * THEME_PAD,
+                                         card_h - ui_px(70));
+    if (thumb) lv_obj_align(thumb, LV_ALIGN_CENTER, 0, ui_px(4));
+#endif
 
     /* 打印（主操作，accent） */
     int bw = (ui_content_w() - gap) / 2;

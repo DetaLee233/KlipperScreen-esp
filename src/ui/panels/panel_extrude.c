@@ -86,7 +86,7 @@ static lv_obj_t *create(void)
 }
 
 panel_def_t panel_extrude_def = {
-    .name = "extrude", .title = "挤出",
+    .name = "extrude", .title = "",   /* 无标题：同 move 面板，标题会与标题栏温度压叠 */
     .create = create,
     .on_show = update_temp,
     .on_tick = update_temp,

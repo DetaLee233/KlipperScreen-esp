@@ -19,6 +19,9 @@ menu "Board selection"
         config BOARD_JC8048W550
             bool "JC8048W550 (ESP32-S3, 800x480 ST7262 RGB + GT911)"
 
+        config BOARD_SENSECAP_INDICATOR
+            bool "Seeed SenseCAP Indicator (ESP32-S3, 480x480 ST7701S RGB + FT5x06)"
+
         config BOARD_ESP32S3_JLC_SZP
             bool "立创实战派 ESP32-S3 (ESP32-S3 N16R8, 2.0\" 320x240 ST7789 + FT6336)"
 
@@ -89,7 +92,10 @@ menu "Optional input devices"
         depends on INPUT_ROTARY_ENCODER
         help
             Most full-step EC11 encoders produce four PCNT counts per click.
-            Use 2 or 1 if one physical click skips multiple UI items.
+            Use 2 or 1 if several physical clicks are needed for one UI item.
+            Increase the value if one physical click skips multiple UI items.
+            Encoder-equipped firmware also allows a confirmed runtime override
+            under Settings -> Display -> Encoder step.
 
     config INPUT_ROTARY_PHASE_PULLUPS
         bool "Enable internal pull-ups on encoder A/B"

@@ -8,7 +8,7 @@
 
 
 <p align="center">
-  <img src="docs/screenshots/main_photo.png" alt="KlipperScreen-esp running on a CYD 2432S028R" width="720">
+  <img src="docs/screenshots/main_photo.jpg" alt="KlipperScreen-esp running on multiple devices" width="720">
 </p>
 
 **KlipperScreen-esp** is a compact, cross-platform display and controller for 3D printers. It runs on inexpensive ESP32 dev boards as well as Windows/macOS desktops, fully controls **Klipper** printers through **Moonraker**, and provides **Bambu cloud status monitoring**.
@@ -38,6 +38,22 @@ Download the flash package `*.zip` for your board from [Releases](../../releases
 
 Supported boards: the common yellow CYD ESP32 dev boards and ESP32-S3 boards. Prebuilt firmware per board: **[Supported boards](https://umeiko.github.io/KlipperScreen-esp/boards/)**
 
+## Deploying to a Linux host
+
+Install with this one-liner:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/umeiko/KlipperScreen-esp/main/scripts/linux/install.sh | bash
+```
+
+Or download `desktop-linux-x86_64.tar.gz` / `desktop-linux-arm64.tar.gz` from [Releases](../../releases), extract, then run `./install.sh`:
+
+- Choose between a **dedicated display service** (systemd autostart, fullscreen via Wayland-weston or X11) or a regular **desktop app**.
+- If `KlipperScreen.service` is detected, the installer offers to disable it.
+- On Klipper hosts, config lands in `~/printer_data/config/KlipperScreen-esp/` (editable from fluidd/mainsail) and logs in `~/printer_data/logs/`.
+- On desktop environments, config lives in `~/.config/KlipperScreen-esp/`; uninstall with `uninstall.sh`.
+
+
 ## First-time setup
 
 1. Settings → WiFi: scan → pick an AP → enter the password. WiFi credentials are saved and auto-connect on next boot.
@@ -46,6 +62,8 @@ Supported boards: the common yellow CYD ESP32 dev boards and ESP32-S3 boards. Pr
 
 Bambu mode lives under Settings → Printer Connection → Machine Mode → Bambu.
 
+If taps land off-target on a resistive-touch board, run the two-point calibration described in the docs: [Touch calibration](https://umeiko.github.io/KlipperScreen-esp/#touch-calibration-resistive-touch-boards).
+
 Serial CLI commands (115200 8N1): `help` / `wifi` / `mr` / `printer <1-6>` / `mrstart` / `gc` / `status` / `ps` / `ls` / `cd` / `cat` / `rm` …
 
 ## Building from source
@@ -53,10 +71,12 @@ Serial CLI commands (115200 8N1): `help` / `wifi` / `mr` / `printer <1-6>` / `mr
 Toolchain: **ESP-IDF v5.5.5** · **LVGL v9.3** · SDL2 (desktop).
 
 ```bash
-bash tools/build-desktop.sh                       # desktop (controller + simulator)
-bash tools/build-esp32.sh <board> build           # ESP32 firmware (13 boards)
+bash tools/build-desktop.sh                       # desktop (KlipperScreen-esp controller + simulator)
+bash tools/build-esp32.sh <board> build           # ESP32 firmware (16 boards)
 bash tools/build-esp32.sh <board> flash COMx      # build and flash
 ```
+
+Linux hosts can also build from source: `sudo apt install cmake libsdl2-dev libcjson-dev`, then in `src/ports/desktop` run `cmake -S . -B build && cmake --build build`.
 
 Portable MSYS2 toolchain setup, LVGL checkout, multi-board build details, and regenerating CJK font subsets and icons: **[Building from source](https://umeiko.github.io/KlipperScreen-esp/building/)**
 

@@ -31,9 +31,22 @@ void debug_cli_start(void);
 void app_main(void)
 {
     bsp_init();            /* 显示 + 触摸 + LVGL 任务（核 1） */
+    settings_seed_defaults();   /* 与 desktop 对称；ESP32 的 bsp 实现为空操作 */
 
     bsp_lvgl_lock();
     bsp_input_init();      /* 可选附加输入（Kconfig 旋转编码器），可与触摸并存 */
+#if BSP_HAS_ROTARY_ENCODER
+    bsp_encoder_set_counts_per_detent(settings_load_encoder_counts());
+  #endif
+    if (bsp_disp_can_color_order())
+        bsp_disp_set_color_order(settings_load_display_color_order());
+    /* 反色/旋转/镜像偏好必须在开机动画之前应用：动画经 bsp_lcd_push 走
+       面板硬件镜像/反色寄存器，先配置动画才能跟随用户的显示方向偏好。
+       同时也满足"面板命令须在 LVGL 首帧 flush 前完成"的约束（ui_app_create
+       之前 LVGL 无任何画面可刷）。 */
+    bsp_disp_set_invert(settings_load_display_invert());    /* 反色偏好 */
+    bsp_disp_set_rotate180(settings_load_display_rotate()); /* 180° 旋转偏好 */
+    bsp_disp_set_mirror_x(settings_load_display_mirror());  /* 水平镜像偏好 */
     boot_anim_play(bsp_lcd_push, bsp_delay_ms);   /* 「Umeko」开机动画（~2.5s） */
     ui_app_create();       /* 与 desktop 后端共享的同一份 UI 代码 */
 #if BSP_HAS_BUTTONS
@@ -41,11 +54,6 @@ void app_main(void)
 #endif
     bsp_set_brightness(settings_load_brightness());   /* 背光偏好（klipperscreen.conf） */
     bsp_set_screen_timeout(settings_load_screen_off());   /* 自动息屏（0=永不） */
-    /* 面板控制命令与 LVGL flush 共用同一个 LCD/SPI 队列，必须在首帧
-       刷新开始前完成，否则 C3 上会与 40 行局部缓冲的 DMA 传输交叉。 */
-    bsp_disp_set_invert(settings_load_display_invert());    /* 反色偏好 */
-    bsp_disp_set_rotate180(settings_load_display_rotate()); /* 180° 旋转偏好 */
-    bsp_disp_set_mirror_x(settings_load_display_mirror());  /* 水平镜像偏好 */
     bsp_lvgl_unlock();
 
     /* WiFi/PHY 启动必须放在 UI 创建完成且释放 LVGL 锁之后。

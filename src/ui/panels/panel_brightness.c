@@ -13,7 +13,7 @@ static lv_obj_t *lbl_pct;
 
 static void update_label(int pct)
 {
-    char buf[8];
+    char buf[16];
     snprintf(buf, sizeof(buf), "%d%%", pct);
     lv_label_set_text(lbl_pct, buf);
 }
@@ -34,6 +34,7 @@ static lv_obj_t *create(void)
     lv_obj_set_style_bg_color(scr, theme_col(THEME_COL_BG), 0);
 
     int pct = settings_load_brightness();
+    if (pct < 5) pct = 5;   /* 下限 5%：0% 全黑会吓到不知道咋恢复的用户 */
 
     lv_obj_t *card = theme_card(scr);
     /* 卡片撑满标题栏到底边的空间（大屏不再上半截卡片、下半截空白） */
@@ -46,9 +47,9 @@ static lv_obj_t *create(void)
     update_label(pct);
 
     lv_obj_t *slider = lv_slider_create(card);
-    lv_obj_set_size(slider, ui_px(264), ui_px(16));
+    lv_obj_set_size(slider, LV_MIN(ui_px(264), ui_content_w() - ui_px(16)), ui_px(16));   /* 方屏 2x 换算 528px 超屏宽 */
     lv_obj_align(slider, LV_ALIGN_BOTTOM_MID, 0, ui_px(-30));
-    lv_slider_set_range(slider, 0, 100);
+    lv_slider_set_range(slider, 5, 100);   /* 最低 5%，不给拉到全黑 */
     lv_slider_set_value(slider, pct, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(slider, theme_col(THEME_COL_SURFACE2), LV_PART_MAIN);
     lv_obj_set_style_bg_color(slider, theme_col(THEME_COL_ACCENT), LV_PART_INDICATOR);

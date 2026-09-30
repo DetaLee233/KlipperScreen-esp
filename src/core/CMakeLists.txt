@@ -2,11 +2,13 @@
 # desktop 后端不用本文件（在 ports/desktop/CMakeLists.txt 里直接列 mock 源文件）
 idf_component_register(SRCS "app_settings.c"
                             "printer_model.c"
+                            "file_list_stream.c"
+                            "moonraker_files_esp32.c"
                             "moonraker_client.c"
                             "klipper_api.c"
+                            "gcode_thumbnail.c"
                             "bambu_status.c"
                             "bambu_status_stream.c"
-                            "bambu_monitor_stub.c"
                        INCLUDE_DIRS "."
-                       REQUIRES lvgl json esp_websocket_client esp_timer bambu
+                       REQUIRES lvgl json esp_websocket_client esp_http_client esp_timer bambu
                        PRIV_REQUIRES bsp)

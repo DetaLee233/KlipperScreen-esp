@@ -356,14 +356,18 @@ static void end_key(bambu_status_stream_t *p)
 {
     p->cur_key = F_NONE;
     p->key_buf[p->key_len] = 0;
-    if (p->key_overflow) return;
-    if (p->depth == 1) {
-        /* 根层只关心第一个 "print"（cJSON first-wins） */
-        if (p->print_seen == 0 && !p->pending_print &&
-            strcmp(p->key_buf, "print") == 0)
-            p->pending_print = 1;
-    } else if (p->depth == 2 && p->lv[1].is_print) {
-        p->cur_key = match_field(p->key_buf);
+    if (!p->key_overflow) {
+        /* 超长键必然不匹配任何目标字段，但结构状态必须照常推进，
+           否则全量 push_status 里 "buildplate_marker_detector"（26 字符）
+           这类长键会让整条消息被判畸形而静默丢弃 */
+        if (p->depth == 1) {
+            /* 根层只关心第一个 "print"（cJSON first-wins） */
+            if (p->print_seen == 0 && !p->pending_print &&
+                strcmp(p->key_buf, "print") == 0)
+                p->pending_print = 1;
+        } else if (p->depth == 2 && p->lv[1].is_print) {
+            p->cur_key = match_field(p->key_buf);
+        }
     }
     p->lv[p->depth - 1].state = L_OBJ_COLON;
 }

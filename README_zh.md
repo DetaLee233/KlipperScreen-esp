@@ -6,7 +6,7 @@
 
 
 <p align="center">
-  <img src="docs/screenshots/main_photo.png" alt="CYD 2432S028R 实机运行效果" width="720">
+  <img src="docs/screenshots/main_photo.jpg" alt="多设备实机运行效果" width="720">
 </p>
 
 **KlipperScreen-esp** 是一款紧凑的跨平台 3D 打印机显示与控制软件，可运行在低成本 ESP32 开发板以及 Windows/macOS 桌面端。它通过 **Moonraker** 完整控制 **Klipper** 打印机，并提供 **拓竹云端状态监视** 
@@ -40,6 +40,21 @@ ESP-IDF v5.5.5 · LVGL v9.3 · 多后端（ESP32, Windows, Linux, MacOS）
 
 支持板型：最常见的各种CYD黄色esp32开发板，以及esp32s3开发板。预编译固件详见 **[支持的板子](https://umeiko.github.io/KlipperScreen-esp/zh/boards/)**
 
+## 部署到 Linux 上位机
+
+执行这行命令安装：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/umeiko/KlipperScreen-esp/main/scripts/linux/install.sh | bash
+```
+
+也可以从 [Releases](../../releases) 下载 `desktop-linux-x86_64.tar.gz` 或 `desktop-linux-arm64.tar.gz`，解压后运行 `./install.sh`：
+
+- 安装时可选**独占显示服务**（systemd 开机自启全屏，Wayland-weston 或 X11 后端）或普通**桌面 App**。
+- 检测到 `KlipperScreen.service` 时会询问是否停用。
+- Klipper 上位机上配置落在 `~/printer_data/config/KlipperScreen-esp/`（fluidd/mainsail 可直接编辑），日志在 `~/printer_data/logs/`。
+- 如果安装在桌面环境，配置位于 `~/.config/KlipperScreen-esp/`；卸载请运行 `uninstall.sh`。
+
 
 ## 首次配置
 
@@ -49,6 +64,8 @@ ESP-IDF v5.5.5 · LVGL v9.3 · 多后端（ESP32, Windows, Linux, MacOS）
 
 拓竹模式从“设置 → 打印机连接设置 → 机器模式 → 拓竹”进入。
 
+电阻屏板型如果出现触摸点击不准，请参照文档进行两点校准：[触摸校准](https://umeiko.github.io/KlipperScreen-esp/zh/)。
+
 串口 CLI 可用命令（115200 8N1）：`help` / `wifi` / `mr` / `printer <1-6>` / `mrstart` / `gc` / `status` / `ps` / `ls` / `cd` / `cat` / `rm` …
 
 
@@ -57,10 +74,12 @@ ESP-IDF v5.5.5 · LVGL v9.3 · 多后端（ESP32, Windows, Linux, MacOS）
 工具链：**ESP-IDF v5.5.5** · **LVGL v9.3** · SDL2（桌面端）。
 
 ```bash
-bash tools/build-desktop.sh                       # 桌面端（控制端 + 模拟器）
-bash tools/build-esp32.sh <board> build           # ESP32 固件（13 种板型）
+bash tools/build-desktop.sh                       # 桌面端（控制端 KlipperScreen-esp + 模拟器）
+bash tools/build-esp32.sh <board> build           # ESP32 固件（16 种板型）
 bash tools/build-esp32.sh <board> flash COMx      # 构建并烧录
 ```
+
+Linux 上位机也可从源码构建：`sudo apt install cmake libsdl2-dev libcjson-dev` 后进 `src/ports/desktop` 执行 `cmake -S . -B build && cmake --build build`。
 
 便携 MSYS2 工具链安装、LVGL 克隆、多板型构建细节、中文字体子集与图标的重新生成，见文档站 **[从源码构建](https://umeiko.github.io/KlipperScreen-esp/zh/building/)**。
 

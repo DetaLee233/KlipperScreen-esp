@@ -10,6 +10,7 @@
  * happens while the snapshot mutex is held.
  */
 #include "bambu_cloud.h"
+#include <stddef.h>
 
 void bambu_rt_init(void);
 void bambu_rt_snapshot(bambu_cloud_snapshot_t *out);
@@ -21,3 +22,11 @@ bool bambu_rt_request_sms_code(const char *phone);
 bool bambu_rt_submit_code(const char *code);
 bool bambu_rt_refresh_devices(void);
 void bambu_rt_logout(void);
+
+/* Internal bridge used by the ESP monitor.  Copies are bounded and remain
+ * owned by the caller; callers must wipe them after destroying MQTT. */
+bool bambu_rt_copy_mqtt_credentials(bambu_cloud_region_t *region,
+                                    char *user_id, size_t user_id_cap,
+                                    char *token, size_t token_cap);
+void bambu_rt_wake(void);
+void bambu_rt_wipe(void *ptr, size_t len);

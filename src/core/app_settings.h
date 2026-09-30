@@ -61,6 +61,7 @@ bool settings_save_wifi(const wifi_conf_t *in);
 
 bool settings_load_moonraker(moonraker_conf_t *out);              /* 当前槽 */
 bool settings_save_moonraker(const moonraker_conf_t *in);         /* 当前槽 */
+void settings_seed_defaults(void);   /* 首次开机播种平台默认打印机（仅 Linux） */
 bool settings_load_moonraker_slot(int slot, moonraker_conf_t *out);
 bool settings_save_moonraker_slot(int slot, const moonraker_conf_t *in);
 bool settings_save_printer_name(const char *name);              /* 当前槽 */
@@ -98,6 +99,16 @@ int  settings_load_display_rotate(void);
 bool settings_save_display_rotate(int en);
 int  settings_load_display_mirror(void);
 bool settings_save_display_mirror(int en);
+/* 桌面端软件旋转：0/90/180/270（ESP32 不用，走 display_rotate 硬件翻转） */
+int  settings_load_display_rotation(void);
+bool settings_save_display_rotation(int deg);
+/* display_color_order: 0=板型默认，1=RGB，2=BGR；非法值回到默认。 */
+int  settings_load_display_color_order(void);
+bool settings_save_display_color_order(int order);
+/* encoder_counts=0（缺省，板型默认）或 1..8（每格正交计数）。
+ * 试用不写文件，仅明确确认后保存；非法/损坏值回退 0。 */
+int  settings_load_encoder_counts(void);
+bool settings_save_encoder_counts(int counts);
 void settings_load_theme(char *out, size_t len);
 bool settings_save_theme(const char *theme);
 
