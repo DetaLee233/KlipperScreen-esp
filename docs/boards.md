@@ -47,6 +47,8 @@ Flash packages are named `ESP-IDFv5.5-<board>.zip` (asset names carry no version
 
 ## CYD 2432S028R
 
+**Flash package**: [ESP-IDFv5.5-cyd_2432s028r.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r.zip)
+
 ![CYD 2432S028R](screenshots/boards/cyd_2432s028r.jpg)
 
 *The "Cheap Yellow Display" (yellow-PCB 2.8" dev board), the reference board of this project.* Photo: [Random Nerd Tutorials](https://randomnerdtutorials.com/cheap-yellow-display-esp32-2432s028r/)
@@ -82,6 +84,8 @@ Encoder modules that already provide pull-ups on A/B can be wired directly.
 
 ## CYD 2432S028R-PLUS
 
+**Flash package**: [ESP-IDFv5.5-cyd_2432s028r_plus.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r_plus.zip)
+
 ![CYD 2432S028R-PLUS](screenshots/boards/cyd_2432s028r_plus.png)
 
 *The ST7789 variant of the CYD (ESP32-WROOM-32E module). Same board family, same pinout — only the display driver IC and the reset line differ.*
@@ -97,6 +101,8 @@ Logical resolution **320×240 landscape**. Display and touch wiring is **identic
 If the picture looks flipped on your unit, toggle **Settings → Display → 180° rotation**; if colours look inverted, toggle the invert option on the same page — no rewiring or rebuild needed.
 
 ## E32R35T
+
+**Flash package**: [ESP-IDFv5.5-e32r35t.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-e32r35t.zip)
 
 ![E32R35T](screenshots/boards/e32r35t.png)
 
@@ -123,6 +129,8 @@ Logical resolution **480×320 landscape**.
 | BOOT button | 0 | Screen off / wake |
 
 ## esp32s3-st7789-320_240-ec11
+
+**Flash package**: [ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip)
 
 ![esp32s3-st7789-320_240-ec11 Fritzing reference wiring](screenshots/boards/ec11_knob_minimal_breadboard.en.png)
 
@@ -152,6 +160,8 @@ Power the DevKit from USB-C. Many SPI display boards label clock and data as `SC
 **Screen-off / wake buttons.** Wire a momentary button between GPIO39 and GND (the firmware enables the internal pull-up; the press pulls the pin low, release returns high). Press once to blank the screen, press again to wake. The DevKit's on-board BOOT key (GPIO0) works the same way — both buttons are active in parallel, and either one toggles the screen.
 
 ## esp32-st7735s-128_160-ec11
+
+**Flash package**: [ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip)
 
 ![1.8" ST7735S module](screenshots/boards/ec11_knob_esp32_st7735s.png)
 
@@ -184,6 +194,8 @@ ST7735S modules vary between sellers: if the picture is mirrored or shows a colo
 
 ## esp32-st7789-320_240-ec11
 
+**Flash package**: [ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip)
+
 ![ST7789 240×320 module with EC11](screenshots/boards/esp32_st7789_320_240_ec11.png)
 
 *Typical 240×320 ST7789 SPI module paired with an EC11 encoder. Header pins are usually labelled GND / VCC / SCL / SDA / RES / DC / CS / BLK — `SCL`/`SDA` here are SPI SCLK and MOSI, not I2C.*
@@ -214,6 +226,8 @@ A mid-size rotary-only build on the **same ESP32 MCU and the exact same pinout a
 ST7789 modules vary between sellers: if the picture is mirrored or shows a coloured offset band at an edge, adjust `LCD_MIRROR_X/Y` and `LCD_GAP_X/Y` at the top of `src/bsp/esp32/bsp_ec11_knob_esp32_st7789.c` and rebuild. Rotation and press provide all navigation, and either action wakes the display after its timeout.
 
 ## esp32-ILI9341-320_240-ec11
+
+**Flash package**: [ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip)
 
 ![ILI9341 240×320 module with EC11 knob](screenshots/boards/esp32_ili9341_320_240_ec11.jpg)
 
@@ -246,6 +260,8 @@ ILI9341 modules vary between sellers: if the picture is mirrored or shows a colo
 
 ## esp32-ST7796-320_240-ec11
 
+**Flash package**: [ESP-IDFv5.5-esp32-ST7796-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ST7796-320_240-ec11.zip)
+
 *A 240×320 ST7796 SPI display with an EC11 encoder knob — the ST7796 twin of esp32-ILI9341-320_240-ec11 (no photo of this exact build yet). Header pins are usually labelled GND / VCC / SCL / SDA / RES / DC / CS / BLK — `SCL`/`SDA` here are SPI SCLK and MOSI, not I2C.*
 
 A mid-size rotary-only build on the **same ESP32 MCU and the exact same pinout as esp32-ILI9341-320_240-ec11** (all IO aligned to the CYD 2432S028R): a 240×320 ST7796 SPI display plus an EC11 encoder, no touch. Logical resolution **320×240 landscape** — the standard layout class, same as the CYD. Only the display controller changes versus the ILI9341 build; every wire stays where it is.
@@ -274,6 +290,8 @@ A mid-size rotary-only build on the **same ESP32 MCU and the exact same pinout a
 ST7796 modules at the 320×240 window vary between sellers: if the picture is mirrored/upside-down or shows a coloured offset band at an edge, adjust `LCD_MIRROR_X/Y` and `LCD_GAP_X/Y` at the top of `src/bsp/esp32/bsp_esp32_st7796_ec11.c` and rebuild (the initial values follow the proven 480×320 ST7796 landscape semantics and still need on-hardware confirmation). Rotation and press provide all navigation, and either action wakes the display after its timeout.
 
 ## esp32s3-st7796-480_320-xpt2046-ec11
+
+**Flash package**: [ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip)
 
 ![MKS TS35 V2.0](screenshots/boards/esp32s3_st7796_ec11.png)
 
@@ -307,6 +325,8 @@ This configuration drives the **Makerbase MKS TS35 V2.0** as-is — wire it acco
 
 ## esp32s3-ILI9488-480_320-xpt2046-ec11
 
+**Flash package**: [ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip)
+
 ![MKS PI-TS35 V1.0](screenshots/boards/mks_pi_ts35.png)
 
 *A typical board for this target — the Makerbase MKS PI-TS35 V1.0: a 3.5" 480×320 ILI9488 SPI display with XPT2046 resistive touch (the stock screen of the MKS PI / SKIPR Klipper host boards). Any ILI9488 + XPT2046 SPI module works the same way.*
@@ -339,6 +359,8 @@ ILI9488 specifics handled by the firmware:
 
 ## esp32s3-ILI9341-320_240-xpt2046-ec11
 
+**Flash package**: [ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11.zip)
+
 A 320×240 resistive-touch build on the **ESP32-S3-DevKitC-1 N16R8 base**: an ILI9341 SPI display and an XPT2046 touch controller **sharing one SPI bus**, plus an EC11 encoder on the side. Logical resolution **320×240 landscape**. With no factory touch data, **first boot runs the two-point touch calibration automatically**; the result is stored in `touch.json`, and the serial CLI `caltouch` forces recalibration any time.
 
 | Module pin | ESP32-S3 pin | Purpose |
@@ -363,6 +385,8 @@ Power the DevKit over USB-C. The ILI9341 setup reuses the CYD-proven panel param
 
 ## JC8048W550
 
+**Flash package**: [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip)
+
 ![JC8048W550](screenshots/boards/jc8048w550.png)
 
 *Guition 5" capacitive display module (ESP32-S3).* Photo: [openHASP hardware page](https://www.openhasp.com/0.7.0/hardware/guition/jc8048w550/)
@@ -385,6 +409,8 @@ Logical resolution **800×480**. The full RGB-parallel tearing/underflow investi
 | BOOT button (screen off / wake) | 0 |
 
 ## SenseCAP Indicator
+
+**Flash package**: [ESP-IDFv5.5-esp32s3-sensecap-indicator.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-sensecap-indicator.zip)
 
 *Seeed SenseCAP Indicator (the D1/D1S/D1L/D1Pro variants share the same display hardware): a 4" 480×480 square capacitive display with an ESP32-S3 + RP2040 dual-MCU design. Hardware docs: [Seeed Wiki](https://wiki.seeedstudio.com/SenseCAP_Indicator_ESP32_4_inch_Touch_Screen/).*
 
@@ -415,6 +441,8 @@ Logical resolution **480×480**.
 
 ## JLC SZP ESP32-S3
 
+**Flash package**: [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip)
+
 *LCSC "ShiZhanPai" (立创实战派) ESP32-S3 development board with an on-board 2.0" capacitive display.*
 
 ![JLC SZP ESP32-S3](screenshots/boards/esp32s3_jlc_szp.jpg)
@@ -439,6 +467,8 @@ Logical resolution **320×240 landscape**.
 | User button (screen off / wake) | 0 | Active low, internal pull-up |
 
 ## esp32s3-retro-go
+
+**Flash package**: [ESP-IDFv5.5-esp32s3-retro-go.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-retro-go.zip)
 
 *Chaeng's retro-go ESP32-S3 handheld main board (T320-S3): 3.2" IPS display plus a full gamepad-style button cluster, no touch. Firmware source of the pinout: [retro-go_chaeng](https://github.com/Chaeng3/retro-go_chaeng) (`components/retro-go/targets/t320-s3`); open hardware page: [oshwhub.com/chaeng/project_jofcnupz](https://oshwhub.com/chaeng/project_jofcnupz).*
 
@@ -470,6 +500,8 @@ Logical resolution **320×240 landscape**.
 Direction keys move the focus, OK activates the focused control, and BACK closes dialogs or returns to the previous panel — the same behaviour as the desktop keyboard. After the screen blanks on timeout, the first button press only wakes it.
 
 ## esp32c3-st7789-320_240-ec11
+
+**Flash package**: [ESP-IDFv5.5-esp32c3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32c3-st7789-320_240-ec11.zip)
 
 ![ESP32-C3 with ST7789 display and EC11 encoder](screenshots/boards/esp32c3_st7789_320_240_ec11.jpg)
 
@@ -504,6 +536,8 @@ ESP32-C3 differs from the other targets in three ways, all handled by the firmwa
 Deliberately avoided pins: GPIO8 (Super Mini on-board LED), GPIO12/13 (LuatOS on-board LEDs, and flash is DIO so QIO would not boot), GPIO18/19 (USB), GPIO20/21 (UART0). ST7789 modules vary between sellers: if the picture is mirrored or shows a coloured offset band at an edge, adjust `LCD_MIRROR_X/Y` and `LCD_GAP_X/Y` at the top of `src/bsp/esp32/bsp_esp32c3_st7789_ec11.c` and rebuild. Rotation and press provide all navigation, and either action wakes the display after its timeout.
 
 ## Linux host
+
+**Flash package**: [desktop-linux-x86_64.tar.gz](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/desktop-linux-x86_64.tar.gz) / [desktop-linux-arm64.tar.gz](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/desktop-linux-arm64.tar.gz)
 
 ![KlipperScreen-esp on a Redmi 4 running Ubuntu](screenshots/boards/linux_redmi4.jpg)
 

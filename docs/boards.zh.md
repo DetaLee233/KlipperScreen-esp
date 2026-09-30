@@ -47,6 +47,8 @@
 
 ## CYD 2432S028R
 
+**刷机包**: [ESP-IDFv5.5-cyd_2432s028r.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r.zip)
+
 ![CYD 2432S028R](screenshots/boards/cyd_2432s028r.jpg)
 
 *"Cheap Yellow Display"（黄色 PCB 的 2.8" 开发板），本项目的参考板型。* 图：[Random Nerd Tutorials](https://randomnerdtutorials.com/cheap-yellow-display-esp32-2432s028r/)
@@ -82,6 +84,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ## CYD 2432S028R-PLUS
 
+**刷机包**: [ESP-IDFv5.5-cyd_2432s028r_plus.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r_plus.zip)
+
 ![CYD 2432S028R-PLUS](screenshots/boards/cyd_2432s028r_plus.png)
 
 *CYD 的 ST7789 变种（ESP32-WROOM-32E 模组）。同一板族、同一引脚——只有显示驱动 IC 和复位线不同。*
@@ -97,6 +101,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 个别单元画面颠倒时，在 **设置 → 显示 → 180° 旋转** 切换；颜色反色时在同一页切换反色选项——不用改接线也不用重新编译。
 
 ## E32R35T
+
+**刷机包**: [ESP-IDFv5.5-e32r35t.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-e32r35t.zip)
 
 ![E32R35T](screenshots/boards/e32r35t.png)
 
@@ -123,6 +129,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | BOOT 按键 | 0 | 息屏/唤醒 |
 
 ## esp32s3-st7789-320_240-ec11
+
+**刷机包**: [ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip)
 
 ![esp32s3-st7789-320_240-ec11 Fritzing 参考接线](screenshots/boards/ec11_knob_minimal_breadboard.zh.png)
 
@@ -152,6 +160,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 **息屏/唤醒按钮。** 在 GPIO39 与 GND 之间接一个轻触按键即可（固件开启内部上拉、下拉关闭：松开为高电平 1，按下接地为低电平 0，低电平有效）。按一下息屏，再按一下唤醒。开发板板载的 BOOT 键（GPIO0）功能相同——两个按钮同时生效，任意一个都能切换息屏/唤醒。
 
 ## esp32-st7735s-128_160-ec11
+
+**刷机包**: [ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip)
 
 ![1.8 寸 ST7735S 模组](screenshots/boards/ec11_knob_esp32_st7735s.png)
 
@@ -184,6 +194,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ## esp32-st7789-320_240-ec11
 
+**刷机包**: [ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip)
+
 ![ST7789 240×320 模组与 EC11](screenshots/boards/esp32_st7789_320_240_ec11.png)
 
 *常见的 240×320 ST7789 SPI 模组搭配 EC11 编码器。排针一般印 GND / VCC / SCL / SDA / RES / DC / CS / BLK——这里的 `SCL`/`SDA` 是 SPI 的 SCLK 和 MOSI，不是 I2C。*
@@ -214,6 +226,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 不同卖家的 ST7789 模组有差异：画面镜像或边缘出现彩边/偏移时，改 `src/bsp/esp32/bsp_ec11_knob_esp32_st7789.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 重新编译即可。EC11 的旋转与按下都能导航，屏幕自动熄灭后再次操作旋钮即可唤醒。
 
 ## esp32-ILI9341-320_240-ec11
+
+**刷机包**: [ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip)
 
 ![ILI9341 240×320 模组与 EC11 旋钮](screenshots/boards/esp32_ili9341_320_240_ec11.jpg)
 
@@ -246,6 +260,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ## esp32-ST7796-320_240-ec11
 
+**刷机包**: [ESP-IDFv5.5-esp32-ST7796-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ST7796-320_240-ec11.zip)
+
 *240×320 ST7796 SPI 屏搭配 EC11 编码器旋钮——esp32-ILI9341-320_240-ec11 的 ST7796 姊妹机型（暂无本机型实物图）。排针一般印 GND / VCC / SCL / SDA / RES / DC / CS / BLK——这里的 `SCL`/`SDA` 是 SPI 的 SCLK 和 MOSI，不是 I2C。*
 
 与 esp32-ILI9341-320_240-ec11 **同款主控（ESP32）、完全相同引脚**（全部对齐 CYD 2432S028R）的纯旋钮中屏机型：240×320 ST7796 SPI 屏 + EC11 编码器，无触摸。逻辑分辨率 **320×240 横屏**——标准布局档，与 CYD 一致。相对 ILI9341 机型只是换了显示控制器，所有接线原位不动。
@@ -274,6 +290,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 不同卖家的 ST7796 模组在 320×240 窗口下有差异：画面镜像/颠倒或边缘出现彩边/偏移时，改 `src/bsp/esp32/bsp_esp32_st7796_ec11.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 重新编译即可（初始值沿用 480×320 ST7796 模组的横屏语义，需实机确认）。EC11 的旋转与按下都能导航，屏幕自动熄灭后再次操作旋钮即可唤醒。
 
 ## esp32s3-st7796-480_320-xpt2046-ec11
+
+**刷机包**: [ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip)
 
 ![MKS TS35 V2.0](screenshots/boards/esp32s3_st7796_ec11.png)
 
@@ -307,6 +325,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ## esp32s3-ILI9488-480_320-xpt2046-ec11
 
+**刷机包**: [ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip)
+
 ![MKS PI-TS35 V1.0](screenshots/boards/mks_pi_ts35.png)
 
 *本机型的典型板子——MKS PI-TS35 V1.0：3.5" 480×320 ILI9488 SPI 屏 + XPT2046 电阻触摸（MKS PI / SKIPR Klipper 上位机板的配屏）。任何 ILI9488 + XPT2046 的 SPI 模组都同样适用。*
@@ -339,6 +359,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ## esp32s3-ILI9341-320_240-xpt2046-ec11
 
+**刷机包**: [ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11.zip)
+
 **ESP32-S3-DevKitC-1 N16R8 底座**的 320×240 电阻触摸机型：ILI9341 SPI 屏与 XPT2046 触摸**共用一条 SPI 总线**，外挂 EC11 旋钮。逻辑分辨率 **320×240 横屏**。无出厂触摸数据，**首次开机自动进入两点触摸校准**；结果存 `touch.json`，之后开机直接加载，个体差异可用串口 CLI `caltouch` 强制重校。
 
 | 模块引脚 | 接到 ESP32-S3 | 用途 |
@@ -363,6 +385,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ## JC8048W550
 
+**刷机包**: [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip)
+
 ![JC8048W550](screenshots/boards/jc8048w550.png)
 
 *Guition 5" 电容屏模组（ESP32-S3）。* 图：[openHASP 硬件页](https://www.openhasp.com/0.7.0/hardware/guition/jc8048w550/)
@@ -385,6 +409,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | BOOT 按键（息屏/唤醒） | 0 |
 
 ## SenseCAP Indicator
+
+**刷机包**: [ESP-IDFv5.5-esp32s3-sensecap-indicator.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-sensecap-indicator.zip)
 
 *Seeed SenseCAP Indicator（D1/D1S/D1L/D1Pro 显示部分硬件相同）：4" 480×480 方形电容屏，ESP32-S3 + RP2040 双主控设计。硬件资料：[Seeed Wiki](https://wiki.seeedstudio.com/cn/SenseCAP_Indicator_ESP32_4_inch_Touch_Screen/)。*
 
@@ -415,6 +441,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ## 立创实战派 ESP32-S3
 
+**刷机包**: [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip)
+
 *立创"实战派" ESP32-S3 开发板，板载 2.0" 电容触摸屏。*
 
 ![立创实战派 ESP32-S3](screenshots/boards/esp32s3_jlc_szp.jpg)
@@ -439,6 +467,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | 用户键（息屏/唤醒） | 0 | 低电平有效，内部上拉 |
 
 ## esp32s3-retro-go
+
+**刷机包**: [ESP-IDFv5.5-esp32s3-retro-go.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-retro-go.zip)
 
 *Chaeng 的 retro-go ESP32-S3 掌机主板（T320-S3）：3.2" IPS 屏 + 全套掌机按键，无触摸。引脚依据上游固件 [retro-go_chaeng](https://github.com/Chaeng3/retro-go_chaeng)（`components/retro-go/targets/t320-s3`）核对；硬件开源页：[oshwhub.com/chaeng/project_jofcnupz](https://oshwhub.com/chaeng/project_jofcnupz)。*
 
@@ -470,6 +500,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 方向键移动焦点，确定激活聚焦控件，返回关闭弹层或退回上一面板——与桌面端键盘行为一致。屏幕超时熄灭后，第一次按键只负责唤醒。
 
 ## esp32c3-st7789-320_240-ec11
+
+**刷机包**: [ESP-IDFv5.5-esp32c3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32c3-st7789-320_240-ec11.zip)
 
 ![ESP32-C3、ST7789 屏幕与 EC11 编码器实机](screenshots/boards/esp32c3_st7789_320_240_ec11.jpg)
 
@@ -504,6 +536,8 @@ ESP32-C3 与其它目标芯片有三点差异，固件已全部处理：**单核
 刻意避开的引脚：GPIO8（Super Mini 板载 LED）、GPIO12/13（合宙板载 LED，且 flash 为 DIO 模式用 QIO 无法启动）、GPIO18/19（USB）、GPIO20/21（UART0）。不同卖家的 ST7789 模组有差异：若画面镜像或边缘出现彩色偏移带，调整 `src/bsp/esp32/bsp_esp32c3_st7789_ec11.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 后重新编译。旋转与按下承担全部导航，息屏后任一动作均可唤醒。
 
 ## Linux 上位机
+
+**刷机包**: [desktop-linux-x86_64.tar.gz](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/desktop-linux-x86_64.tar.gz) / [desktop-linux-arm64.tar.gz](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/desktop-linux-arm64.tar.gz)
 
 ![红米4 上的 Ubuntu 运行 KlipperScreen-esp](screenshots/boards/linux_redmi4.jpg)
 
